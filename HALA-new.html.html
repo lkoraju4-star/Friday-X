@@ -1,0 +1,2930 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Retail Intelligence — Sales, Profit &amp; Inventory Management</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+/* ============================ THEME ============================ */
+:root{
+  --bg:#0b0f16; --bg2:#0f1520; --panel:#141c28; --panel2:#18222f; --panel3:#1d2938;
+  --border:#233146; --border2:#2c3d56;
+  --text:#e7eefb; --muted:#8ba0bd; --dim:#61748f;
+  --accent:#4f8cff; --accent2:#22d3a6; --danger:#ff5c73; --warn:#ffb020; --purple:#a78bfa;
+  --glow:79,140,255;
+  --radius:14px; --radius-sm:10px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+body.light{
+  --bg:#eef2f8; --bg2:#ffffff; --panel:#ffffff; --panel2:#f7f9fd; --panel3:#eef3fb;
+  --border:#dfe6f1; --border2:#cfd9e8;
+  --text:#0e1726; --muted:#5b6b85; --dim:#8496ae;
+  --shadow:0 8px 24px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:radial-gradient(1200px 600px at 10% -10%, rgba(var(--glow),.10), transparent 60%), var(--bg);
+  color:var(--text);font-family:"Segoe UI",Inter,system-ui,-apple-system,"Noto Sans Arabic",Arial,sans-serif;
+  font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden;
+}
+body.resizing,body.dragging{cursor:grabbing;user-select:none}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim)}
+
+/* ============================ GLOW ============================ */
+.glow{position:relative;transition:box-shadow .28s ease,border-color .28s ease,transform .28s ease}
+.glow::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+  background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),rgba(var(--glow),.16),transparent 62%);
+  transition:opacity .28s ease;z-index:0;
+}
+.glow:hover{border-color:rgba(var(--glow),.55)!important;box-shadow:0 0 0 1px rgba(var(--glow),.20),0 8px 28px rgba(var(--glow),.14);transform:translateY(-1px)}
+.glow:hover::after{opacity:1}
+.glow>*{position:relative;z-index:1}
+
+/* ============================ LAYOUT ============================ */
+#app{display:flex;height:100vh;width:100vw;overflow:hidden}
+.sidebar{
+  width:250px;flex:0 0 250px;background:linear-gradient(180deg,var(--bg2),var(--panel));
+  border-inline-end:1px solid var(--border);display:flex;flex-direction:column;
+  transition:width .25s ease,flex-basis .25s ease;overflow:hidden;z-index:30;
+}
+.sidebar.collapsed{width:70px;flex-basis:70px}
+.sidebar.collapsed .brand-text,.sidebar.collapsed .nav-item span{display:none}
+.sidebar.collapsed .nav-item{justify-content:center;padding:12px 0}
+.brand{display:flex;align-items:center;gap:12px;padding:18px 16px 16px;border-bottom:1px solid var(--border)}
+.logo{
+  width:40px;height:40px;flex:0 0 40px;border-radius:12px;display:grid;place-items:center;font-size:20px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#04121f;font-weight:800;
+  box-shadow:0 6px 18px rgba(var(--glow),.35);
+}
+.brand-text{min-width:0}
+.brand-text h1{
+  font-size:16px;margin:0;font-weight:800;letter-spacing:.2px;line-height:1.2;
+  background:linear-gradient(90deg,var(--text),#9fc0ff);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+body.light .brand-text h1{background:linear-gradient(90deg,#0e1726,#2b5fb8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand-text span{font-size:10px;color:var(--muted);display:block;margin-top:3px;line-height:1.35;letter-spacing:.2px}
+nav{padding:12px 10px;display:flex;flex-direction:column;gap:5px;flex:1;overflow-y:auto}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;border:1px solid transparent;
+  background:transparent;color:var(--muted);font-size:13.5px;font-weight:500;text-align:start;width:100%;
+}
+.nav-item i{font-style:normal;font-size:15px;width:20px;text-align:center;flex:0 0 20px}
+.nav-item:hover{background:var(--panel2);color:var(--text)}
+.nav-item.active{background:linear-gradient(90deg,rgba(var(--glow),.18),rgba(var(--glow),.04));color:var(--text);border-color:rgba(var(--glow),.35)}
+.side-foot{padding:12px 10px;border-top:1px solid var(--border)}
+.side-foot button{width:100%}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{
+  height:60px;flex:0 0 60px;display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:var(--bg2);border-bottom:1px solid var(--border);z-index:20;
+}
+.topbar h2{font-size:15px;margin:0;font-weight:700;white-space:nowrap;letter-spacing:.2px}
+.spacer{flex:1}
+.btn{
+  border:1px solid var(--border2);background:var(--panel2);color:var(--text);
+  padding:8px 13px;border-radius:9px;font-size:12.5px;font-weight:600;transition:all .2s;white-space:nowrap;
+}
+.btn:hover{background:var(--panel3);border-color:rgba(var(--glow),.5)}
+.btn.primary{background:linear-gradient(135deg,var(--accent),#3a6fe0);border-color:transparent;color:#fff}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:rgba(255,92,115,.45);color:var(--danger)}
+.btn.sm{padding:5px 9px;font-size:11.5px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border2);background:var(--panel2);color:var(--text);font-size:15px}
+
+/* ============================ CONTROL BAR ============================ */
+.controlbar{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:11px 16px;
+  background:var(--bg2);border-bottom:1px solid var(--border);z-index:15;
+}
+.ctl{display:flex;align-items:center;gap:7px}
+.ctl label{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.7px;font-weight:700;white-space:nowrap}
+select,input[type=text],input[type=number],input[type=search]{
+  background:var(--panel2);border:1px solid var(--border2);color:var(--text);
+  padding:7px 10px;border-radius:8px;font-size:12.5px;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+select:focus,input:focus{border-color:rgba(var(--glow),.7);box-shadow:0 0 0 3px rgba(var(--glow),.13)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;background:rgba(var(--glow),.13);
+  border:1px solid rgba(var(--glow),.35);color:var(--text);padding:4px 9px;border-radius:20px;font-size:11.5px;
+}
+.chip b{color:var(--accent);font-weight:700}
+.chip button{background:none;border:none;color:var(--muted);font-size:13px;line-height:1;padding:0}
+.chip button:hover{color:var(--danger)}
+
+/* dropdown */
+.dd{position:relative}
+.dd-btn{display:flex;align-items:center;gap:8px;min-width:190px;justify-content:space-between}
+.dd-panel{
+  position:absolute;top:calc(100% + 6px);inset-inline-start:0;min-width:260px;max-height:340px;overflow:auto;
+  background:var(--panel);border:1px solid var(--border2);border-radius:12px;box-shadow:var(--shadow);
+  padding:10px;display:none;z-index:100;
+}
+.dd.open .dd-panel{display:block}
+.dd-item{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;font-size:13px;cursor:pointer}
+.dd-item:hover{background:var(--panel2)}
+.dd-item input{accent-color:var(--accent)}
+.dd-actions{display:flex;gap:6px;margin-bottom:8px}
+
+/* ============================ VIEWS ============================ */
+.views{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px;scroll-behavior:smooth}
+.view{display:none}
+.view.active{display:block}
+.section-title{display:flex;align-items:center;gap:10px;margin:4px 0 12px;font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.section-title::after{content:"";flex:1;height:1px;background:var(--border)}
+
+/* KPI */
+.kpi-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+.kpi-card{
+  position:relative;flex:0 0 auto;width:224px;height:112px;background:linear-gradient(160deg,var(--panel),var(--panel2));
+  border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;flex-direction:column;
+  justify-content:space-between;overflow:hidden;
+}
+.kpi-card::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:.85}
+.kpi-card.g2::before{background:var(--accent2)} .kpi-card.g3::before{background:var(--warn)}
+.kpi-card.g4::before{background:var(--danger)} .kpi-card.g5::before{background:var(--purple)}
+.kpi-label{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;line-height:1.3}
+.kpi-value{font-size:23px;font-weight:800;letter-spacing:-.5px;line-height:1.1;word-break:break-all}
+.kpi-sub{font-size:10.5px;color:var(--dim)}
+
+/* WIDGET GRID */
+.widget-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-bottom:16px}
+.widget{
+  position:relative;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  display:flex;flex-direction:column;overflow:hidden;min-width:0;
+  grid-column:span 6;height:320px;
+}
+.widget-head{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);
+  cursor:grab;background:var(--panel2);flex:0 0 auto;
+}
+.widget-head:active{cursor:grabbing}
+.widget-title{font-size:12.5px;font-weight:700;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.widget-tools{display:flex;gap:4px;margin-inline-start:auto}
+.widget-tools button{
+  width:24px;height:24px;display:grid;place-items:center;border-radius:6px;border:1px solid transparent;
+  background:transparent;color:var(--muted);font-size:12px;line-height:1;
+}
+.widget-tools button:hover{background:var(--panel3);color:var(--text);border-color:var(--border2)}
+.widget-body{flex:1;min-height:0;overflow:hidden;padding:0;display:flex;flex-direction:column}
+.widget-body.pad{padding:8px}
+.widget.minimized{height:44px!important}
+.widget.minimized .widget-body{display:none}
+.widget.fullscreen{
+  position:fixed!important;inset:16px!important;width:auto!important;height:auto!important;z-index:9999;
+  grid-column:auto!important;box-shadow:0 30px 90px rgba(0,0,0,.6);background:var(--panel);
+}
+.chart-wrap{position:relative;width:100%;height:100%;min-height:120px;padding:8px}
+.rz-handle{
+  position:absolute;inset-inline-end:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:5;
+  background:linear-gradient(135deg,transparent 46%,var(--border2) 46%,var(--border2) 54%,transparent 54%),
+             linear-gradient(135deg,transparent 66%,var(--border2) 66%,var(--border2) 74%,transparent 74%);
+  opacity:.6;
+}
+.rz-handle:hover{opacity:1}
+.kpi-card .rz-handle{opacity:.35}
+
+/* ============================ DATA TABLE ENGINE ============================ */
+.tbl-toolbar{
+  display:flex;align-items:center;gap:7px;padding:7px 9px;border-bottom:1px solid var(--border);
+  background:var(--panel2);flex-wrap:wrap;flex:0 0 auto;
+}
+.tbl-toolbar .tbl-search{flex:0 0 170px;padding:5px 9px;font-size:12px}
+.tbl-count{font-size:11.5px;color:var(--muted);white-space:nowrap;font-weight:600}
+.tbl-count b{color:var(--text)}
+.tbl-toolbar select{padding:5px 8px;font-size:11.5px}
+.tbl-scroll{overflow:auto;flex:1;min-height:0;position:relative}
+table.dt{table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:12.2px;min-width:100%}
+table.dt thead th{
+  position:sticky;top:0;z-index:3;background:var(--panel3);color:var(--muted);font-weight:700;
+  text-align:start;padding:0;border-bottom:1px solid var(--border2);white-space:nowrap;
+  font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;user-select:none;
+}
+table.dt thead th.sortable{cursor:pointer}
+table.dt thead th.sortable:hover{color:var(--text)}
+.th-inner{display:flex;align-items:center;gap:4px;padding:7px 8px;min-width:0}
+.th-label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.th-sort{font-size:9px;color:var(--accent);width:9px;flex:0 0 9px;text-align:center}
+.th-filter{
+  border:none;background:transparent;color:var(--dim);font-size:9px;padding:2px 3px;border-radius:4px;
+  flex:0 0 auto;line-height:1;
+}
+.th-filter:hover{color:var(--accent);background:var(--panel)}
+.th-filter.active{color:var(--accent);background:rgba(var(--glow),.2)}
+.th-resize{position:absolute;top:0;inset-inline-end:0;width:6px;height:100%;cursor:col-resize;z-index:4}
+.th-resize:hover{background:var(--accent);opacity:.5}
+table.dt thead th{position:sticky}
+table.dt thead th .th-inner{position:relative}
+table.dt tbody td{
+  padding:6px 9px;border-bottom:1px solid var(--border);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;color:var(--text);
+}
+table.dt tbody tr:hover td{background:rgba(var(--glow),.07)}
+table.dt tbody tr:last-child td{border-bottom:none}
+table.dt .num{text-align:end;font-variant-numeric:tabular-nums}
+.tbl-pager{
+  display:flex;align-items:center;gap:8px;padding:6px 9px;border-top:1px solid var(--border);
+  background:var(--panel2);font-size:11.5px;color:var(--muted);flex-wrap:wrap;flex:0 0 auto;
+}
+.tbl-pager button{padding:3px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border2);background:var(--panel);color:var(--text)}
+.tbl-pager button:hover:not(:disabled){border-color:rgba(var(--glow),.5)}
+.tbl-pager button:disabled{opacity:.35;cursor:not-allowed}
+.tbl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 20px;color:var(--dim);text-align:center}
+.tbl-empty .big{font-size:30px;opacity:.5}
+.tbl-empty h3{margin:0;font-size:13px;color:var(--muted)}
+.tbl-chips{display:flex;flex-wrap:wrap;gap:5px;padding:5px 9px;border-bottom:1px solid var(--border);background:rgba(var(--glow),.04)}
+.tbl-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(var(--glow),.14);border:1px solid rgba(var(--glow),.38);
+  padding:2px 7px;border-radius:14px;font-size:11px}
+.tbl-chip b{color:var(--accent);font-weight:700}
+.tbl-chip button{background:none;border:none;color:var(--muted);padding:0;font-size:12px;line-height:1}
+.tbl-chip button:hover{color:var(--danger)}
+.tag{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10.3px;font-weight:700;letter-spacing:.2px}
+.tag.high{background:rgba(255,92,115,.16);color:var(--danger);border:1px solid rgba(255,92,115,.35)}
+.tag.med{background:rgba(255,176,32,.16);color:var(--warn);border:1px solid rgba(255,176,32,.35)}
+.tag.low{background:rgba(34,211,166,.14);color:var(--accent2);border:1px solid rgba(34,211,166,.3)}
+.tag.info{background:rgba(79,140,255,.14);color:var(--accent);border:1px solid rgba(79,140,255,.3)}
+.tag.muted{background:var(--panel3);color:var(--muted);border:1px solid var(--border2)}
+.pos{color:var(--accent2)} .neg{color:var(--danger)} .warnc{color:var(--warn)}
+.mini{font-size:11px;color:var(--dim)}
+
+/* ============================ FILTER POPUP ============================ */
+.fpop{
+  position:fixed;z-index:1300;width:330px;max-height:76vh;background:var(--bg2);
+  border:1px solid var(--border2);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.55);
+  display:none;flex-direction:column;overflow:hidden;font-size:12.5px;
+}
+.fpop.open{display:flex}
+.fpop-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--panel2)}
+.fpop-head b{font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpop-body{flex:1;overflow:auto;padding:10px 12px}
+.fpop-foot{display:flex;gap:6px;padding:9px 12px;border-top:1px solid var(--border);align-items:center;flex-wrap:wrap;background:var(--panel2)}
+.fpop-foot .grow{flex:1}
+.fpop-vals{max-height:190px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px;background:var(--panel2);margin:6px 0}
+.fpop-vals label{display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:5px;font-size:11.8px;cursor:pointer;color:var(--muted)}
+.fpop-vals label:hover{background:var(--panel3);color:var(--text)}
+.fpop-vals input{width:13px;height:13px;accent-color:var(--accent);flex:0 0 13px}
+.fpop-row{display:flex;gap:6px;margin-bottom:7px}
+.fpop-row select,.fpop-row input{flex:1;min-width:0;padding:5px 8px;font-size:12px}
+.fpop-sec{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 5px}
+.fpop-actions{display:flex;gap:6px;margin-bottom:4px}
+.fpop-actions button{padding:3px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border2);background:var(--panel);color:var(--muted)}
+.fpop-actions button:hover{color:var(--text);border-color:rgba(var(--glow),.5)}
+.fpop-check{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.fpop-check input{accent-color:var(--accent)}
+
+/* ============================ DRAWER / MODAL ============================ */
+.backdrop{position:fixed;inset:0;background:rgba(4,8,14,.62);backdrop-filter:blur(3px);z-index:900;display:none}
+.backdrop.open{display:block}
+.drawer{
+  position:fixed;top:0;bottom:0;inset-inline-end:0;width:430px;max-width:92vw;background:var(--bg2);
+  border-inline-start:1px solid var(--border2);box-shadow:-20px 0 60px rgba(0,0,0,.5);z-index:1000;
+  display:flex;flex-direction:column;transform:translateX(110%);transition:transform .28s ease;
+}
+html[dir="rtl"] .drawer{transform:translateX(-110%)}
+.drawer.open{transform:none!important}
+.drawer-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.drawer-head h3{margin:0;font-size:14px}
+.drawer-body{flex:1;overflow-y:auto;padding:12px 16px}
+.drawer-foot{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px}
+
+.modal{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);width:520px;max-width:94vw;
+  max-height:90vh;overflow:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
+  box-shadow:var(--shadow);z-index:1100;padding:22px;opacity:0;pointer-events:none;transition:all .22s ease;
+}
+.modal.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal h3{margin:0 0 4px;font-size:17px}
+.modal .sub{color:var(--muted);font-size:12.5px;margin-bottom:16px;line-height:1.6}
+.field{margin-bottom:15px}
+.field>label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.5px}
+.opt-grid{display:flex;flex-wrap:wrap;gap:7px}
+.opt{
+  padding:8px 14px;border-radius:9px;border:1px solid var(--border2);background:var(--panel2);
+  color:var(--muted);font-size:12.5px;font-weight:600;transition:all .18s;
+}
+.opt:hover{border-color:rgba(var(--glow),.5);color:var(--text)}
+.opt.sel{background:rgba(var(--glow),.18);border-color:rgba(var(--glow),.65);color:var(--text);box-shadow:0 0 0 3px rgba(var(--glow),.10)}
+input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--border2);border-radius:12px;background:var(--panel2);color:var(--muted);font-size:12.5px;cursor:pointer}
+input[type=file]::file-selector-button{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:8px;margin-inline-end:12px;font-weight:700;font-size:12px;cursor:pointer}
+
+/* FILTER BLOCKS (global drawer) */
+.fblock{border:1px solid var(--border);border-radius:11px;padding:10px 12px;margin-bottom:9px;background:var(--panel)}
+.fblock.active{border-color:rgba(var(--glow),.5);background:rgba(var(--glow),.05)}
+.fhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fhead b{font-size:12.5px}
+.fhead .fclear{margin-inline-start:auto;background:none;border:none;color:var(--dim);font-size:11px}
+.fhead .fclear:hover{color:var(--danger)}
+.frow{display:flex;gap:6px;margin-bottom:7px}
+.frow select,.frow input{flex:1;min-width:0;padding:6px 8px;font-size:12px}
+.fvals{max-height:120px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:5px;background:var(--panel2)}
+.fvals label{display:flex;align-items:center;gap:7px;padding:3px 5px;border-radius:5px;font-size:11.8px;cursor:pointer;color:var(--muted)}
+.fvals label:hover{background:var(--panel3);color:var(--text)}
+.fvals input{width:13px;height:13px;accent-color:var(--accent)}
+
+/* HISTORY */
+.hist-item{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:11px;background:var(--panel);margin-bottom:9px}
+.hist-item .hname{font-weight:700;font-size:13px;min-width:180px;flex:1}
+.hist-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--muted)}
+.hist-meta b{color:var(--text);font-weight:700}
+
+/* PERF */
+.perf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;padding:12px}
+.perf-cell{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--panel2)}
+.perf-cell .pl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.perf-cell .pv{font-size:17px;font-weight:800;margin-top:3px}
+
+/* misc */
+.banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;
+  background:rgba(var(--glow),.08);border:1px solid rgba(var(--glow),.3);margin-bottom:16px;font-size:12.5px;color:var(--muted);line-height:1.6}
+.banner b{color:var(--text)}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding:40px 20px;color:var(--dim);text-align:center;min-height:180px}
+.empty .big{font-size:34px;opacity:.5}
+.empty h3{margin:0;font-size:14px;color:var(--muted)}
+.empty p{margin:0;font-size:12.5px;max-width:440px;line-height:1.6}
+@media print{
+  .sidebar,.topbar,.controlbar,.widget-tools,.rz-handle,.btn,.tbl-toolbar,.tbl-pager,.th-filter,.th-resize{display:none!important}
+  .views{overflow:visible}
+  body{background:#fff;color:#000}
+}
+@media(max-width:900px){
+  .sidebar{position:fixed;inset-block:0;inset-inline-start:0;transform:translateX(-105%);z-index:50}
+  html[dir="rtl"] .sidebar{transform:translateX(105%)}
+  .sidebar.mobile-open{transform:none!important}
+  .kpi-card{width:calc(50% - 6px)}
+  .widget{grid-column:span 12!important}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">◈</div>
+      <div class="brand-text">
+        <h1 data-i18n="app.title">Retail Intelligence</h1>
+        <span data-i18n="app.sub">Sales, Profit &amp; Inventory Management</span>
+      </div>
+    </div>
+    <nav id="nav">
+      <button class="nav-item active glow" data-view="dashboard"><i>▦</i><span data-i18n="nav.dashboard">Management Overview</span></button>
+      <button class="nav-item glow" data-view="products"><i>▤</i><span data-i18n="nav.products">Product Performance</span></button>
+      <button class="nav-item glow" data-view="inventory"><i>▣</i><span data-i18n="nav.inventory">Inventory Control</span></button>
+      <button class="nav-item glow" data-view="branches"><i>⛬</i><span data-i18n="nav.branches">Branch Performance</span></button>
+      <button class="nav-item glow" data-view="transfers"><i>⇄</i><span data-i18n="nav.transfers">Stock Transfer Center</span></button>
+      <button class="nav-item glow" data-view="branchreport"><i>▧</i><span data-i18n="nav.branchreport">Branch Reports</span></button>
+      <button class="nav-item glow" data-view="datatable"><i>▥</i><span data-i18n="nav.data">Data Management</span></button>
+      <button class="nav-item glow" data-view="history"><i>◷</i><span data-i18n="nav.history">Upload History</span></button>
+    </nav>
+    <div class="side-foot">
+      <button class="btn primary glow" id="sideUpload" data-i18n="btn.upload">⬆ Upload Excel Data</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn glow" id="btnToggleSidebar" title="Toggle sidebar">☰</button>
+      <h2 id="viewTitle" data-i18n="nav.dashboard">Management Overview</h2>
+      <div class="spacer"></div>
+      <button class="btn ghost glow" id="btnLang" title="Switch language">العربية</button>
+      <button class="btn ghost glow" id="btnTheme" title="Toggle theme">🌙</button>
+      <button class="btn ghost glow" id="btnResetLayout" data-i18n="btn.resetLayout">Reset Dashboard Layout</button>
+      <button class="btn primary glow" id="btnUpload" data-i18n="btn.upload">⬆ Upload Excel Data</button>
+    </header>
+
+    <div class="controlbar" id="controlbar">
+      <div class="ctl">
+        <label data-i18n="ctl.mode">Report Scope</label>
+        <select id="modeSelect">
+          <option value="all" data-i18n="mode.all">All Branches</option>
+          <option value="single" data-i18n="mode.single">Individual Branch</option>
+          <option value="multi" data-i18n="mode.multi">Compare Branches</option>
+        </select>
+      </div>
+      <div class="ctl">
+        <label data-i18n="ctl.branch">Branch Selection</label>
+        <div class="dd" id="branchDD">
+          <button class="btn dd-btn glow" id="branchDDBtn"><span id="branchDDLabel">All Branches</span> ▾</button>
+          <div class="dd-panel" id="branchDDPanel"></div>
+        </div>
+      </div>
+      <div class="ctl">
+        <label data-i18n="ctl.dataset">Dataset Selection</label>
+        <select id="datasetSelect"></select>
+      </div>
+      <div class="ctl">
+        <label data-i18n="ctl.subgroup">Product Category</label>
+        <select id="subgroupSelect"></select>
+      </div>
+      <div class="ctl">
+        <label data-i18n="ctl.search">Search Products</label>
+        <input type="search" id="itemSearch" data-i18n-ph="ph.search" placeholder="Search by item name or code…" style="width:180px">
+      </div>
+      <button class="btn glow" id="btnFilters" data-i18n="btn.filters">Advanced Filters</button>
+      <button class="btn danger glow" id="btnClearFilters" data-i18n="btn.clearAll">Clear All Filters</button>
+      <button class="btn ghost glow" id="btnExport" data-i18n="btn.export">Export Report</button>
+      <div class="chips" id="activeFilterChips" style="flex-basis:100%"></div>
+    </div>
+
+    <div class="views" id="views">
+
+      <!-- ---------- MANAGEMENT OVERVIEW ---------- -->
+      <section class="view active" id="view-dashboard">
+        <div id="emptyBanner" class="banner">
+          <span style="font-size:20px">◈</span>
+          <div><b data-i18n="empty.welcome">Welcome to Retail Intelligence.</b> <span data-i18n="empty.hint">Upload an Excel file to populate the dashboard. No demo data is used.</span></div>
+        </div>
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="widget-grid" id="dashGrid">
+          <div class="widget glow" data-wid="w-branch-sales" data-span="6" data-h="320">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.branchSales">Sales by Branch</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartBranchSales"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-top-items" data-span="6" data-h="320">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.topItems">Top 10 Items by Quantity</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartTopItems"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-subgroup" data-span="4" data-h="300">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.subgroupShare">Subgroup Sales Share</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartSubgroup"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-invstatus" data-span="4" data-h="300">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.invStatus">Inventory Status</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartInvStatus"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-branch-table" data-span="4" data-h="300">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.branchPerf">Branch Performance Summary</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-branchPerf"></div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- PRODUCT PERFORMANCE ---------- -->
+      <section class="view" id="view-products">
+        <div class="widget-grid">
+          <div class="widget glow" data-wid="w-top-products" data-span="7" data-h="440">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.topProducts">Top Products</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-topProducts"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-subgroup-table" data-span="5" data-h="440">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.subgroupPerf">Subgroup Performance</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-subgroupPerf"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-profit-chart" data-span="12" data-h="300">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.profitChart">Profit by Subgroup</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartProfitSub"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- INVENTORY CONTROL ---------- -->
+      <section class="view" id="view-inventory">
+        <div class="widget-grid">
+          <div class="widget glow" data-wid="w-oos" data-span="6" data-h="360">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.oos">Out of Stock</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-oos"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-low" data-span="6" data-h="360">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.low">Low Stock</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-low"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-over" data-span="6" data-h="360">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.over">Overstock</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-over"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-fast" data-span="6" data-h="360">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.fast">Fast Moving</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-fast"></div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- BRANCH PERFORMANCE ---------- -->
+      <section class="view" id="view-branches">
+        <div class="widget-grid">
+          <div class="widget glow" data-wid="w-branch-compare" data-span="12" data-h="400">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.branchCompare">Branch Comparison</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" id="tbl-branchCompare"></div>
+            <div class="rz-handle"></div>
+          </div>
+          <div class="widget glow" data-wid="w-branch-chart" data-span="12" data-h="320">
+            <div class="widget-head"><span class="widget-title" data-i18n="w.branchChart">Sales, Profit &amp; Stock by Branch</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body"><div class="chart-wrap"><canvas id="chartBranchCompare"></canvas></div></div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- STOCK TRANSFER CENTER ---------- -->
+      <section class="view" id="view-transfers">
+        <div class="banner" style="background:rgba(255,92,115,.08);border-color:rgba(255,92,115,.32)">
+          <span style="font-size:18px">⚠</span>
+          <div data-i18n="tr.rule">Strict rule: a transfer is recommended ONLY when the destination branch has ZERO (or negative) available stock and real sales demand. Positive destination stock is never eligible.</div>
+        </div>
+        <div class="flex" style="margin-bottom:12px">
+          <div class="ctl">
+            <label data-i18n="tr.period">Transfer Coverage</label>
+            <select id="transferDaysSelect">
+              <option value="7" data-i18n="tr.d7">7 Days</option>
+              <option value="14" data-i18n="tr.d14">14 Days</option>
+              <option value="30" selected data-i18n="tr.d30">30 Days</option>
+              <option value="custom" data-i18n="tr.customDays">Custom Days</option>
+            </select>
+          </div>
+          <input type="number" id="transferCustomDays" min="1" value="30" style="width:100px;display:none" placeholder="Days">
+          <button class="btn primary glow" id="btnRecalcTransfers" data-i18n="tr.recalc">Recalculate</button>
+          <button class="btn glow" id="btnPrintTransfers" data-i18n="tr.print">Print Report</button>
+          <div class="spacer"></div>
+          <span class="mini" id="transferMeta"></span>
+        </div>
+        <div class="widget glow" data-wid="w-transfers" data-span="12" data-h="560">
+          <div class="widget-head"><span class="widget-title" data-i18n="w.transfers">Stock Transfer Recommendations</span>
+            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+          <div class="widget-body" id="tbl-transferTable"></div>
+          <div class="rz-handle"></div>
+        </div>
+      </section>
+
+      <!-- ---------- BRANCH REPORTS ---------- -->
+      <section class="view" id="view-branchreport">
+        <div class="widget glow" data-wid="w-branch-report" data-span="12" data-h="600">
+          <div class="widget-head"><span class="widget-title" data-i18n="w.branchReport">Branch Stock Transfer Report</span>
+            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+          <div class="widget-body" id="tbl-branchReport"></div>
+          <div class="rz-handle"></div>
+        </div>
+      </section>
+
+      <!-- ---------- DATA MANAGEMENT ---------- -->
+      <section class="view" id="view-datatable">
+        <div class="widget glow" data-wid="w-datatable" data-span="12" data-h="640">
+          <div class="widget-head"><span class="widget-title" data-i18n="w.rawData">Filtered Data Table</span>
+            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+          <div class="widget-body" id="tbl-dataTable"></div>
+          <div class="rz-handle"></div>
+        </div>
+      </section>
+
+      <!-- ---------- UPLOAD HISTORY ---------- -->
+      <section class="view" id="view-history">
+        <div class="section-title" data-i18n="hist.title">Upload History</div>
+        <div id="historyList"></div>
+
+        <div class="section-title" style="margin-top:22px" data-i18n="perf.title">Performance Monitor</div>
+        <div class="widget-grid">
+          <div class="widget glow" data-wid="w-perf" data-span="12" data-h="230">
+            <div class="widget-head"><span class="widget-title" data-i18n="perf.title">Performance Monitor</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" style="overflow:auto">
+              <div class="perf-grid" id="perfGrid"></div>
+              <div style="padding:0 12px 12px">
+                <button class="btn glow" id="btnClearCache" data-i18n="perf.clearcache">Clear Cache</button>
+              </div>
+            </div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:22px" data-i18n="set.title">Business Rules &amp; Settings</div>
+        <div class="widget-grid">
+          <div class="widget glow" data-wid="w-settings" data-span="12" data-h="260">
+            <div class="widget-head"><span class="widget-title" data-i18n="set.title">Business Rules &amp; Settings</span>
+              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
+            <div class="widget-body" style="padding:14px;overflow:auto">
+              <div class="flex" style="gap:18px">
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.safety">Safety Stock (per item / branch)</label>
+                  <input type="number" id="setSafety" min="0" value="5" style="width:100%">
+                </div>
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.low">Low Stock Threshold</label>
+                  <input type="number" id="setLow" min="0" value="10" style="width:100%">
+                </div>
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.fast">Fast-Moving Threshold (avg daily sales ≥)</label>
+                  <input type="number" id="setFast" min="0" step="0.1" value="1" style="width:100%">
+                </div>
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.overDays">Overstock Coverage (days)</label>
+                  <input type="number" id="setOverDays" min="1" value="60" style="width:100%">
+                </div>
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.overQty">Overstock Minimum Quantity (no sales)</label>
+                  <input type="number" id="setOverQty" min="0" value="100" style="width:100%">
+                </div>
+                <div class="field" style="min-width:210px">
+                  <label data-i18n="set.defaultTransfer">Default Transfer Period (days)</label>
+                  <input type="number" id="setTransferDays" min="1" value="30" style="width:100%">
+                </div>
+              </div>
+              <button class="btn primary glow" id="btnSaveSettings" data-i18n="btn.save">Save Settings</button>
+            </div>
+            <div class="rz-handle"></div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /views -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ================= GLOBAL FILTER DRAWER ================= -->
+<div class="backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="filterDrawer">
+  <div class="drawer-head">
+    <h3 data-i18n="filt.title">Advanced Filters</h3>
+    <div class="spacer"></div>
+    <button class="icon-btn glow" id="closeDrawer" title="Close">✕</button>
+  </div>
+  <div class="drawer-body" id="filterBody"></div>
+  <div class="drawer-foot">
+    <button class="btn primary glow" id="applyFilters" data-i18n="filt.apply">Apply Filters</button>
+    <button class="btn danger glow" id="clearAllFilters2" data-i18n="btn.clearAll">Clear All Filters</button>
+  </div>
+</aside>
+
+<!-- ================= COLUMN FILTER POPUP ================= -->
+<div class="fpop" id="fpop">
+  <div class="fpop-head">
+    <b id="fpopTitle">Filter</b>
+    <button class="icon-btn glow" id="fpopClose" style="width:26px;height:26px;font-size:12px">✕</button>
+  </div>
+  <div class="fpop-body" id="fpopBody"></div>
+  <div class="fpop-foot">
+    <label class="fpop-check" style="flex-basis:100%">
+      <input type="checkbox" id="fpopApplyAll">
+      <span data-i18n="tbl.applyAll">Apply filter to all reports</span>
+    </label>
+    <span class="grow"></span>
+    <button class="btn sm danger" id="fpopClear" data-i18n="tbl.clear">Clear</button>
+    <button class="btn sm primary" id="fpopApply" data-i18n="tbl.apply">Apply</button>
+  </div>
+</div>
+
+<!-- ================= UPLOAD MODAL ================= -->
+<div class="backdrop" id="modalBackdrop"></div>
+<div class="modal" id="uploadModal">
+  <h3 data-i18n="up.title">Upload Excel File</h3>
+  <div class="sub" data-i18n="up.sub">Select your file, then tell us the reporting period so average daily sales are calculated correctly.</div>
+  <div class="field">
+    <label data-i18n="up.file">Excel File (.xlsx / .xls / .csv)</label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+  </div>
+  <div class="field">
+    <label data-i18n="up.days">How many days of sales data does this file contain?</label>
+    <div class="opt-grid" id="daysOpts">
+      <button class="opt" data-days="1" data-i18n="up.day1">1 Day</button>
+      <button class="opt" data-days="7" data-i18n="up.day7">7 Days</button>
+      <button class="opt" data-days="14" data-i18n="up.day14">14 Days</button>
+      <button class="opt sel" data-days="30" data-i18n="up.day30">30 Days</button>
+      <button class="opt" data-days="60" data-i18n="up.day60">60 Days</button>
+      <button class="opt" data-days="90" data-i18n="up.day90">90 Days</button>
+      <button class="opt" data-days="custom" data-i18n="up.custom">Custom Days</button>
+    </div>
+    <input type="number" id="customDays" min="1" data-i18n-ph="up.customPh" placeholder="Enter custom number of days" style="width:100%;margin-top:8px;display:none">
+  </div>
+  <div class="field">
+    <label data-i18n="up.type">Data Type</label>
+    <select id="dataTypeSelect" style="width:100%">
+      <option value="Daily Sales Data" data-i18n="dt.daily">Daily Sales Data</option>
+      <option value="Cumulative Sales Data" data-i18n="dt.cumulative">Cumulative Sales Data</option>
+      <option value="Period Sales Summary" data-i18n="dt.period">Period Sales Summary</option>
+      <option value="Stock Snapshot" data-i18n="dt.stock">Stock Snapshot</option>
+    </select>
+  </div>
+  <div class="flex" style="justify-content:flex-end;margin-top:6px">
+    <button class="btn ghost glow" id="cancelUpload" data-i18n="btn.cancel">Cancel</button>
+    <button class="btn primary glow" id="confirmUpload" data-i18n="up.process">Process File</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   0. CONSTANTS
+   ============================================================================ */
+const LS_LAYOUT='retailbi.layout.v4';
+const LS_SETTINGS='retailbi.settings.v4';
+const LS_PREFS='retailbi.prefs.v4';
+const LS_TABLES='retailbi.tables.v4';
+const DB_NAME='retailbi_db_v4', STORE='datasets';
+
+const COLUMNS=[
+  {key:'itemCode',    label:'Item Code',                 type:'text'},
+  {key:'itemName',    label:'Item Name',                 type:'text'},
+  {key:'branchCode',  label:'Branch Code',               type:'text'},
+  {key:'subgroupCode',label:'Subgroup Code',             type:'text'},
+  {key:'subgroupName',label:'Subgroup Name',             type:'text'},
+  {key:'unit',        label:'Unit',                      type:'text'},
+  {key:'qty',         label:'Net Sales Quantity',        type:'num'},
+  {key:'invoice',     label:'Net Invoice',               type:'num'},
+  {key:'cost',        label:'Cost',                      type:'num'},
+  {key:'profit',      label:'Profit',                    type:'num'},
+  {key:'margin',      label:'Profit Margin Percentage',  type:'num'},
+  {key:'stock',       label:'Available Stock Quantity',  type:'num'}
+];
+const COL=Object.fromEntries(COLUMNS.map(c=>[c.key,c]));
+const RAW_COLMAP=Object.fromEntries(COLUMNS.map(c=>[c.key,{type:c.type,get:r=>r[c.key]}]));
+
+const VIEW_TITLE_KEY={
+  dashboard:'nav.dashboard', products:'nav.products', inventory:'nav.inventory',
+  branches:'nav.branches', transfers:'nav.transfers', branchreport:'nav.branchreport',
+  data:'nav.data', history:'nav.history'
+};
+const PR_KEY={High:'pr.high',Medium:'pr.medium',Low:'pr.low'};
+const ST_KEY={Pending:'st.pending',Approved:'st.approved',Rejected:'st.rejected'};
+
+/* ============================================================================
+   1. TRANSLATIONS
+   ============================================================================ */
+const I18N={
+en:{
+  'app.title':'Retail Intelligence','app.sub':'Sales, Profit & Inventory Management',
+  'app.docTitle':'Retail Intelligence — Sales, Profit & Inventory Management',
+  'nav.dashboard':'Management Overview','nav.products':'Product Performance','nav.inventory':'Inventory Control',
+  'nav.branches':'Branch Performance','nav.transfers':'Stock Transfer Center','nav.branchreport':'Branch Reports',
+  'nav.data':'Data Management','nav.history':'Upload History',
+  'btn.upload':'⬆ Upload Excel Data','btn.resetLayout':'Reset Dashboard Layout','btn.filters':'Advanced Filters',
+  'btn.clearAll':'Clear All Filters','btn.export':'Export Report','btn.save':'Save Settings','btn.cancel':'Cancel',
+  'btn.load':'Load','btn.delete':'Delete','btn.approve':'Approve','btn.reject':'Reject',
+  'ctl.mode':'Report Scope','ctl.branch':'Branch Selection','ctl.dataset':'Dataset Selection',
+  'ctl.subgroup':'Product Category','ctl.search':'Search Products',
+  'mode.all':'All Branches','mode.single':'Individual Branch','mode.multi':'Compare Branches',
+  'opt.all':'All','opt.allSubgroups':'All Subgroups','opt.noFile':'No file loaded',
+  'ph.search':'Search by item name or code…',
+  'empty.welcome':'Welcome to Retail Intelligence.','empty.hint':'Upload an Excel file to populate the dashboard. No demo data is used.',
+  'w.branchSales':'Sales by Branch','w.topItems':'Top 10 Items by Quantity','w.subgroupShare':'Subgroup Sales Share',
+  'w.invStatus':'Inventory Status','w.branchPerf':'Branch Performance Summary','w.topProducts':'Top Products',
+  'w.subgroupPerf':'Subgroup Performance','w.profitChart':'Profit by Subgroup','w.oos':'Out of Stock',
+  'w.low':'Low Stock','w.over':'Overstock','w.fast':'Fast Moving','w.branchCompare':'Branch Comparison',
+  'w.branchChart':'Sales, Profit & Stock by Branch','w.transfers':'Stock Transfer Recommendations',
+  'w.branchReport':'Branch Stock Transfer Report','w.rawData':'Filtered Data Table','w.settings':'Business Rules & Settings',
+  'kpi.qty':'Total Sales Quantity','kpi.invoice':'Total Sales Amount','kpi.cost':'Total Cost','kpi.profit':'Total Profit',
+  'kpi.margin':'Overall Profit Margin','kpi.stock':'Total Available Stock','kpi.items':'Items Sold',
+  'kpi.branches':'Active Branches','kpi.oos':'Out-of-Stock Items','kpi.low':'Low-Stock Items',
+  'kpi.over':'Overstock Items','kpi.fast':'Fast-Moving Items','kpi.sub':'{rows} rows • {days}-day period',
+  'col.itemCode':'Item Code','col.itemName':'Item Name','col.branchCode':'Branch Code','col.subgroupCode':'Subgroup Code',
+  'col.subgroupName':'Subgroup Name','col.unit':'Unit','col.qty':'Net Sales Quantity','col.invoice':'Net Invoice',
+  'col.cost':'Cost','col.profit':'Profit','col.margin':'Profit Margin %','col.stock':'Available Stock Quantity',
+  'filt.title':'Advanced Filters','filt.apply':'Apply Filters','filt.clear':'Clear','filt.value':'Value','filt.max':'Max',
+  'filt.text':'Text','filt.novalues':'No values available',
+  'op.contains':'Contains','op.ncontains':'Does not contain','op.startswith':'Starts with','op.endswith':'Ends with',
+  'op.eq':'Exact match','op.gt':'Greater than','op.lt':'Less than','op.numeq':'Equal to','op.between':'Between',
+  'filt.d.contains':'contains "{v}"','filt.d.ncontains':'does not contain "{v}"','filt.d.startswith':'starts with "{v}"',
+  'filt.d.endswith':'ends with "{v}"','filt.d.eq':'equals "{v}"','filt.d.gt':'> {v}','filt.d.lt':'< {v}',
+  'filt.d.between':'{a} – {b}','filt.d.values':'{n} selected value(s)','chip.active':'{n} active','chip.remove':'Remove filter',
+  'th.branch':'Branch','th.code':'Code','th.item':'Item','th.itemName':'Item Name','th.subgroup':'Subgroup',
+  'th.qty':'Quantity','th.sales':'Net Sales','th.salesQty':'Sales Qty','th.cost':'Cost','th.profit':'Profit',
+  'th.margin':'Margin %','th.stock':'Stock','th.items':'Items','th.oos':'Out of Stock','th.low':'Low',
+  'th.avgDaily':'Avg / Day','th.dest':'Destination','th.destStock':'Dest. Stock','th.destSales':'Dest. Sales Qty',
+  'th.period':'Period','th.coverage':'Coverage','th.required':'Required Qty','th.source':'Source Branch',
+  'th.sourceStock':'Source Stock','th.safety':'Safety Stock','th.transferable':'Transferable','th.finalQty':'Final Qty',
+  'th.priority':'Priority','th.status':'Status','th.reason':'Reason','th.actions':'Actions','th.demand':'Demand (period)',
+  'th.rec7':'Rec. 7d','th.rec14':'Rec. 14d','th.rec30':'Rec. 30d','th.sources':'Available Sources (excess)',
+  'ch.netSales':'Net Sales','ch.qty':'Quantity','ch.profit':'Profit','ch.invoice':'Net Invoice','ch.stock':'Stock',
+  'ch.oos':'Out of Stock','ch.low':'Low Stock','ch.over':'Overstock','ch.fast':'Fast Moving','ch.normal':'Normal',
+  'pr.high':'High','pr.medium':'Medium','pr.low':'Low','st.pending':'Pending','st.approved':'Approved','st.rejected':'Rejected',
+  'tr.rule':'Strict rule: a transfer is recommended ONLY when the destination branch has ZERO (or negative) available stock and real sales demand. Positive destination stock is never eligible.',
+  'tr.period':'Transfer Coverage','tr.d7':'7 Days','tr.d14':'14 Days','tr.d30':'30 Days','tr.customDays':'Custom Days',
+  'tr.generate':'Generate Recommendations','tr.recalc':'Recalculate','tr.print':'Print Report',
+  'tr.meta':'{count} recommendations • coverage {days} days • reporting period {period} days',
+  'tr.empty.title':'No eligible transfers',
+  'tr.empty.desc':'No product currently meets the strict rule: destination stock ≤ 0, real sales demand, and an available source with stock above the safety level.',
+  'tr.reason':'Dest stock {stock} • {qty} {unit} sold in {period}d • avg {ads}/day × {days}d',
+  'br.dest':'Destination Branch','br.src':'Source Branch','br.priority':'Priority','br.status':'Status',
+  'br.empty.title':'No transfer requirements',
+  'br.empty.desc':'No items in the selected branch meet the zero-stock, demand and source-availability rule.',
+  'hist.title':'Upload History','hist.empty.title':'No uploads yet',
+  'hist.empty.desc':'Uploaded Excel files are stored locally and remain available after closing the browser.',
+  'hist.uploaded':'Uploaded','hist.period':'Period','hist.type':'Data Type','hist.branches':'Branches',
+  'hist.products':'Products','hist.sales':'Sales','hist.profit':'Profit','hist.status':'Status','hist.ok':'Processed',
+  'hist.days':'{n} days',
+  'set.title':'Business Rules & Settings','set.safety':'Safety Stock (per item / branch)','set.low':'Low Stock Threshold',
+  'set.fast':'Fast-Moving Threshold (avg daily sales ≥)','set.overDays':'Overstock Coverage (days)',
+  'set.overQty':'Overstock Minimum Quantity (no sales)','set.defaultTransfer':'Default Transfer Period (days)',
+  'up.title':'Upload Excel File','up.sub':'Select your file, then tell us the reporting period so average daily sales are calculated correctly.',
+  'up.file':'Excel File (.xlsx / .xls / .csv)','up.days':'How many days of sales data does this file contain?',
+  'up.day1':'1 Day','up.day7':'7 Days','up.day14':'14 Days','up.day30':'30 Days','up.day60':'60 Days','up.day90':'90 Days',
+  'up.custom':'Custom Days','up.customPh':'Enter custom number of days','up.type':'Data Type','up.process':'Process File',
+  'up.processing':'Processing…','dt.daily':'Daily Sales Data','dt.cumulative':'Cumulative Sales Data',
+  'dt.period':'Period Sales Summary','dt.stock':'Stock Snapshot',
+  'dd.selectAll':'Select All','dd.deselectAll':'Deselect All','dd.noBranches':'No branches loaded',
+  'dd.allBranches':'All Branches','dd.selectBranch':'Select Branch','dd.selectBranches':'Select Branches','dd.nBranches':'{n} branches',
+  'tip.toggleSidebar':'Show / hide sidebar','tip.lang':'Switch language','tip.theme':'Toggle light / dark theme',
+  'tip.minimize':'Minimize','tip.maximize':'Expand to fullscreen','tip.close':'Close',
+  'msg.selectFile':'Please select an Excel file first.','msg.invalidDays':'Please enter a valid number of custom days.',
+  'msg.noRows':'No valid data rows were found in this file. Please check the column headers.',
+  'msg.failed':'Failed to process the file: {e}','msg.loaded':'Loaded {rows} rows • {days}-day period',
+  'msg.filtersApplied':'Filters applied','msg.filtersCleared':'All filters cleared','msg.settingsSaved':'Settings saved',
+  'msg.recsGenerated':'Recommendations generated','msg.recalc':'Recommendations recalculated',
+  'msg.switchMode':'Switch the report scope to Individual Branch or Compare Branches to select branches.',
+  'msg.nothingExport':'Nothing to export — no data matches the current filters.','msg.nothingRecs':'No recommendations to export.',
+  'msg.nothingPrint':'Nothing to print.','msg.confirmDelete':'Delete this dataset permanently?','msg.cacheCleared':'Cache cleared',
+  'msg.parsedWorker':'Processed in background worker','msg.parsedMain':'Processed in main thread',
+  'tbl.searchPh':'Search in table…','tbl.count':'{n} records','tbl.filtered':'{n} of {total}',
+  'tbl.clearAll':'Clear All','tbl.columns':'Columns','tbl.rowsPerPage':'Rows','tbl.page':'Page {p} of {t}',
+  'tbl.prev':'Prev','tbl.next':'Next','tbl.noMatch':'No matching records','tbl.filter':'Filter',
+  'tbl.selectAll':'Select All','tbl.deselectAll':'Deselect All','tbl.searchValues':'Search values…',
+  'tbl.apply':'Apply','tbl.clear':'Clear','tbl.close':'Close','tbl.applyAll':'Apply filter to all reports',
+  'tbl.csv':'CSV','tbl.xlsx':'Excel','tbl.value':'Value','tbl.max':'Max','tbl.activeFilters':'Active filters',
+  'tbl.removeFilter':'Remove','tbl.export':'Export','tbl.sortAsc':'Sort ascending','tbl.sortDesc':'Sort descending',
+  'tbl.showCols':'Show / hide columns','tbl.colVisibility':'Visible columns','tbl.noData':'No data available',
+  'tbl.noDataDesc':'Upload a dataset or adjust the filters to see results.','tbl.ofTotal':'of {n}',
+  'perf.title':'Performance Monitor','perf.records':'Total records','perf.processing':'Dataset processing',
+  'perf.filtered':'Filtered records','perf.render':'Last table render','perf.charts':'Active charts',
+  'perf.size':'Dataset size','perf.cache':'Cache status','perf.clearcache':'Clear Cache','perf.cleared':'Cache cleared',
+  'perf.cached':'Cached','perf.fresh':'Fresh','perf.memory':'In-memory rows','perf.tables':'Tables rendered'
+},
+ar:{
+  'app.title':'ذكاء الأعمال والتجزئة','app.sub':'إدارة المبيعات والأرباح والمخزون',
+  'app.docTitle':'ذكاء الأعمال والتجزئة — إدارة المبيعات والأرباح والمخزون',
+  'nav.dashboard':'نظرة عامة للإدارة','nav.products':'أداء الأصناف','nav.inventory':'إدارة المخزون',
+  'nav.branches':'أداء الفروع','nav.transfers':'إدارة تحويل المخزون','nav.branchreport':'تقارير الفروع',
+  'nav.data':'إدارة البيانات','nav.history':'سجل الملفات المرفوعة',
+  'btn.upload':'⬆ رفع ملف Excel','btn.resetLayout':'استعادة تخطيط لوحة التحكم','btn.filters':'الفلاتر المتقدمة',
+  'btn.clearAll':'مسح جميع الفلاتر','btn.export':'تصدير التقرير','btn.save':'حفظ الإعدادات','btn.cancel':'إلغاء',
+  'btn.load':'تحميل','btn.delete':'حذف','btn.approve':'اعتماد','btn.reject':'رفض',
+  'ctl.mode':'نطاق التقرير','ctl.branch':'اختيار الفرع','ctl.dataset':'اختيار مجموعة البيانات',
+  'ctl.subgroup':'المجموعة الفرعية','ctl.search':'البحث عن الأصناف',
+  'mode.all':'جميع الفروع','mode.single':'فرع واحد','mode.multi':'مقارنة الفروع',
+  'opt.all':'الكل','opt.allSubgroups':'جميع المجموعات','opt.noFile':'لا يوجد ملف محمّل',
+  'ph.search':'ابحث باسم أو كود الصنف…',
+  'empty.welcome':'مرحباً بك في ذكاء الأعمال والتجزئة.','empty.hint':'قم برفع ملف Excel لتعبئة لوحة التحكم. لا تُستخدم أي بيانات تجريبية.',
+  'w.branchSales':'المبيعات حسب الفرع','w.topItems':'أعلى 10 أصناف بالكمية','w.subgroupShare':'توزيع المبيعات حسب المجموعة',
+  'w.invStatus':'حالة المخزون','w.branchPerf':'ملخص أداء الفروع','w.topProducts':'أفضل الأصناف أداءً',
+  'w.subgroupPerf':'أداء المجموعات','w.profitChart':'الأرباح حسب المجموعة','w.oos':'أصناف نفدت من المخزون',
+  'w.low':'مخزون منخفض','w.over':'مخزون زائد','w.fast':'أصناف سريعة الحركة','w.branchCompare':'مقارنة الفروع',
+  'w.branchChart':'المبيعات والأرباح والمخزون حسب الفرع','w.transfers':'توصيات تحويل المخزون',
+  'w.branchReport':'تقرير تحويل المخزون حسب الفرع','w.rawData':'جدول البيانات المفلترة','w.settings':'قواعد وإعدادات العمل',
+  'kpi.qty':'إجمالي كمية المبيعات','kpi.invoice':'إجمالي مبلغ المبيعات','kpi.cost':'إجمالي التكلفة','kpi.profit':'إجمالي الربح',
+  'kpi.margin':'هامش الربح الإجمالي','kpi.stock':'إجمالي المخزون المتاح','kpi.items':'الأصناف المباعة',
+  'kpi.branches':'الفروع النشطة','kpi.oos':'أصناف نفدت من المخزون','kpi.low':'أصناف بمخزون منخفض',
+  'kpi.over':'أصناف بمخزون زائد','kpi.fast':'أصناف سريعة الحركة','kpi.sub':'{rows} سجل • فترة {days} يوم',
+  'col.itemCode':'كود الصنف','col.itemName':'اسم الصنف','col.branchCode':'كود الفرع','col.subgroupCode':'كود المجموعة',
+  'col.subgroupName':'اسم المجموعة','col.unit':'الوحدة','col.qty':'كمية المبيعات الصافية','col.invoice':'صافي الفاتورة',
+  'col.cost':'التكلفة','col.profit':'الربح','col.margin':'هامش الربح %','col.stock':'المخزون المتاح',
+  'filt.title':'الفلاتر المتقدمة','filt.apply':'تطبيق الفلاتر','filt.clear':'مسح','filt.value':'القيمة','filt.max':'الحد الأقصى',
+  'filt.text':'نص','filt.novalues':'لا توجد قيم متاحة',
+  'op.contains':'يحتوي على','op.ncontains':'لا يحتوي على','op.startswith':'يبدأ بـ','op.endswith':'ينتهي بـ',
+  'op.eq':'مطابقة تامة','op.gt':'أكبر من','op.lt':'أقل من','op.numeq':'يساوي','op.between':'بين',
+  'filt.d.contains':'يحتوي على "{v}"','filt.d.ncontains':'لا يحتوي على "{v}"','filt.d.startswith':'يبدأ بـ "{v}"',
+  'filt.d.endswith':'ينتهي بـ "{v}"','filt.d.eq':'يساوي "{v}"','filt.d.gt':'أكبر من {v}','filt.d.lt':'أقل من {v}',
+  'filt.d.between':'{a} – {b}','filt.d.values':'{n} قيمة محددة','chip.active':'{n} فلتر نشط','chip.remove':'إزالة الفلتر',
+  'th.branch':'الفرع','th.code':'الكود','th.item':'الصنف','th.itemName':'اسم الصنف','th.subgroup':'المجموعة',
+  'th.qty':'الكمية','th.sales':'صافي المبيعات','th.salesQty':'كمية المبيعات','th.cost':'التكلفة','th.profit':'الربح',
+  'th.margin':'هامش %','th.stock':'المخزون','th.items':'الأصناف','th.oos':'نفاد','th.low':'منخفض',
+  'th.avgDaily':'المتوسط اليومي','th.dest':'الفرع المستلم','th.destStock':'مخزون المستلم','th.destSales':'كمية مبيعات المستلم',
+  'th.period':'الفترة','th.coverage':'التغطية','th.required':'الكمية المطلوبة','th.source':'الفرع المصدر',
+  'th.sourceStock':'مخزون المصدر','th.safety':'مخزون الأمان','th.transferable':'القابل للتحويل','th.finalQty':'الكمية النهائية',
+  'th.priority':'الأولوية','th.status':'الحالة','th.reason':'السبب','th.actions':'إجراءات','th.demand':'الطلب (الفترة)',
+  'th.rec7':'مقترح 7 أيام','th.rec14':'مقترح 14 يوم','th.rec30':'مقترح 30 يوم','th.sources':'المصادر المتاحة (الفائض)',
+  'ch.netSales':'صافي المبيعات','ch.qty':'الكمية','ch.profit':'الربح','ch.invoice':'صافي الفاتورة','ch.stock':'المخزون',
+  'ch.oos':'نفد من المخزون','ch.low':'مخزون منخفض','ch.over':'مخزون زائد','ch.fast':'حركة سريعة','ch.normal':'طبيعي',
+  'pr.high':'عالية','pr.medium':'متوسطة','pr.low':'منخفضة','st.pending':'قيد الانتظار','st.approved':'تم الاعتماد','st.rejected':'مرفوض',
+  'tr.rule':'قاعدة صارمة: لا يتم اقتراح التحويل إلا عندما يكون مخزون الفرع المستلم صفراً (أو أقل) مع وجود طلب فعلي على الصنف، وتوفر فرع مصدر لديه فائض فوق مخزون الأمان.',
+  'tr.period':'فترة تغطية التحويل','tr.d7':'7 أيام','tr.d14':'14 يوم','tr.d30':'30 يوم','tr.customDays':'أيام مخصصة',
+  'tr.generate':'توليد التوصيات','tr.recalc':'إعادة الحساب','tr.print':'طباعة التقرير',
+  'tr.meta':'{count} توصية • تغطية {days} يوم • فترة التقرير {period} يوم',
+  'tr.empty.title':'لا توجد تحويلات مؤهلة',
+  'tr.empty.desc':'لا يوجد صنف يحقق شرط التحويل الصارم: مخزون المستلم صفر أو أقل، مع طلب فعلي، وتوفر مصدر لديه فائض فوق مخزون الأمان.',
+  'tr.reason':'مخزون المستلم {stock} • بيع {qty} {unit} خلال {period} يوم • المتوسط {ads}/يوم × {days} يوم',
+  'br.dest':'الفرع المستلم','br.src':'الفرع المصدر','br.priority':'الأولوية','br.status':'الحالة',
+  'br.empty.title':'لا توجد احتياجات تحويل',
+  'br.empty.desc':'لا توجد أصناف في الفرع المحدد تحقق شرط نفاد المخزون مع وجود طلب وتوفر مصدر.',
+  'hist.title':'سجل الملفات المرفوعة','hist.empty.title':'لا توجد ملفات مرفوعة بعد',
+  'hist.empty.desc':'يتم تخزين ملفات Excel المرفوعة محلياً وتبقى متاحة بعد إغلاق المتصفح.',
+  'hist.uploaded':'تاريخ الرفع','hist.period':'الفترة','hist.type':'نوع البيانات','hist.branches':'الفروع',
+  'hist.products':'الأصناف','hist.sales':'المبيعات','hist.profit':'الربح','hist.status':'الحالة','hist.ok':'تمت المعالجة',
+  'hist.days':'{n} يوم',
+  'set.title':'قواعد وإعدادات العمل','set.safety':'مخزون الأمان (لكل صنف / فرع)','set.low':'حد المخزون المنخفض',
+  'set.fast':'حد الحركة السريعة (متوسط البيع اليومي ≥)','set.overDays':'أيام تغطية المخزون الزائد',
+  'set.overQty':'الحد الأدنى للمخزون الزائد (بدون مبيعات)','set.defaultTransfer':'فترة التحويل الافتراضية (أيام)',
+  'up.title':'رفع ملف Excel','up.sub':'اختر الملف ثم حدد فترة البيانات لحساب متوسط المبيعات اليومية بشكل صحيح.',
+  'up.file':'ملف Excel (.xlsx / .xls / .csv)','up.days':'كم عدد أيام بيانات المبيعات في هذا الملف؟',
+  'up.day1':'يوم واحد','up.day7':'7 أيام','up.day14':'14 يوم','up.day30':'30 يوم','up.day60':'60 يوم','up.day90':'90 يوم',
+  'up.custom':'أيام مخصصة','up.customPh':'أدخل عدد الأيام المخصص','up.type':'نوع البيانات','up.process':'معالجة الملف',
+  'up.processing':'جارٍ المعالجة…','dt.daily':'بيانات مبيعات يومية','dt.cumulative':'بيانات مبيعات تراكمية',
+  'dt.period':'ملخص مبيعات فترة','dt.stock':'لقطة مخزون',
+  'dd.selectAll':'تحديد الكل','dd.deselectAll':'إلغاء تحديد الكل','dd.noBranches':'لا توجد فروع محمّلة',
+  'dd.allBranches':'جميع الفروع','dd.selectBranch':'اختر الفرع','dd.selectBranches':'اختر الفروع','dd.nBranches':'{n} فروع',
+  'tip.toggleSidebar':'إظهار / إخفاء الشريط الجانبي','tip.lang':'تغيير اللغة','tip.theme':'تبديل الوضع الفاتح / الداكن',
+  'tip.minimize':'تصغير','tip.maximize':'توسيع لملء الشاشة','tip.close':'إغلاق',
+  'msg.selectFile':'الرجاء اختيار ملف Excel أولاً.','msg.invalidDays':'الرجاء إدخال عدد أيام مخصص صحيح.',
+  'msg.noRows':'لم يتم العثور على سجلات بيانات صالحة في هذا الملف. يرجى التحقق من عناوين الأعمدة.',
+  'msg.failed':'تعذرت معالجة الملف: {e}','msg.loaded':'تم تحميل {rows} سجل • فترة {days} يوم',
+  'msg.filtersApplied':'تم تطبيق الفلاتر','msg.filtersCleared':'تم مسح جميع الفلاتر','msg.settingsSaved':'تم حفظ الإعدادات',
+  'msg.recsGenerated':'تم توليد التوصيات','msg.recalc':'تمت إعادة حساب التوصيات',
+  'msg.switchMode':'قم بتغيير نطاق التقرير إلى «فرع واحد» أو «مقارنة الفروع» لاختيار الفروع.',
+  'msg.nothingExport':'لا يوجد ما يمكن تصديره — لا توجد بيانات مطابقة للفلاتر الحالية.','msg.nothingRecs':'لا توجد توصيات لتصديرها.',
+  'msg.nothingPrint':'لا يوجد ما يمكن طباعته.','msg.confirmDelete':'هل تريد حذف مجموعة البيانات هذه نهائياً؟','msg.cacheCleared':'تم مسح الذاكرة المؤقتة',
+  'msg.parsedWorker':'تمت المعالجة في الخلفية','msg.parsedMain':'تمت المعالجة في الخيط الرئيسي',
+  'tbl.searchPh':'ابحث في الجدول…','tbl.count':'{n} سجل','tbl.filtered':'{n} من {total}',
+  'tbl.clearAll':'مسح الكل','tbl.columns':'الأعمدة','tbl.rowsPerPage':'صفوف','tbl.page':'صفحة {p} من {t}',
+  'tbl.prev':'السابق','tbl.next':'التالي','tbl.noMatch':'لا توجد سجلات مطابقة','tbl.filter':'فلتر',
+  'tbl.selectAll':'تحديد الكل','tbl.deselectAll':'إلغاء التحديد','tbl.searchValues':'ابحث في القيم…',
+  'tbl.apply':'تطبيق','tbl.clear':'مسح','tbl.close':'إغلاق','tbl.applyAll':'تطبيق الفلتر على جميع التقارير',
+  'tbl.csv':'CSV','tbl.xlsx':'Excel','tbl.value':'القيمة','tbl.max':'الحد الأقصى','tbl.activeFilters':'الفلاتر النشطة',
+  'tbl.removeFilter':'إزالة','tbl.export':'تصدير','tbl.sortAsc':'ترتيب تصاعدي','tbl.sortDesc':'ترتيب تنازلي',
+  'tbl.showCols':'إظهار / إخفاء الأعمدة','tbl.colVisibility':'الأعمدة الظاهرة','tbl.noData':'لا توجد بيانات متاحة',
+  'tbl.noDataDesc':'ارفع مجموعة بيانات أو عدّل الفلاتر لعرض النتائج.','tbl.ofTotal':'من {n}',
+  'perf.title':'مراقب الأداء','perf.records':'إجمالي السجلات','perf.processing':'زمن معالجة البيانات',
+  'perf.filtered':'السجلات المفلترة','perf.render':'آخر زمن عرض جدول','perf.charts':'الرسوم النشطة',
+  'perf.size':'حجم البيانات','perf.cache':'حالة الذاكرة المؤقتة','perf.clearcache':'مسح الذاكرة المؤقتة',
+  'perf.cleared':'تم المسح','perf.cached':'مخزّن','perf.fresh':'محدّث','perf.memory':'صفوف بالذاكرة','perf.tables':'الجداول المعروضة'
+ }
+};
+const DT_KEY={'Daily Sales Data':'dt.daily','Cumulative Sales Data':'dt.cumulative','Period Sales Summary':'dt.period','Stock Snapshot':'dt.stock'};
+
+/* ============================================================================
+   2. STATE
+   ============================================================================ */
+const state={
+  lang:'en', theme:'dark', sidebarOpen:true,
+  datasets:[], activeId:null, periodDays:30, dataType:'Daily Sales Data',
+  mode:'all', branch:'', branches:[],
+  filters:{}, quick:{subgroup:'',search:''},
+  view:'dashboard',
+  transferDays:30, transferStatus:{},
+  settings:{safetyStock:5,lowStock:10,fastMoving:1,overstockDays:60,overstockQty:100,defaultTransferDays:30},
+  layout:{},
+  perf:{tablesRendered:0,lastRender:0,cacheHits:0}
+};
+
+/* ============================================================================
+   3. UTILITIES
+   ============================================================================ */
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const fmt=(n,d=0)=>{ n=Number(n); if(!isFinite(n)) n=0;
+  return n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}); };
+const fmtCur=n=>fmt(n,2);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{ if(v==null||v==='')return 0; if(typeof v==='number')return v;
+  const n=Number(String(v).replace(/[,\s%]/g,'')); return isNaN(n)?0:n; };
+const str=v=>v==null?'':String(v).trim();
+const bytes=n=>{ if(n<1024) return n+' B'; if(n<1048576) return (n/1024).toFixed(1)+' KB'; return (n/1048576).toFixed(1)+' MB'; };
+
+function tr(key, fallback){
+  const pack=I18N[state.lang]||{};
+  if(Object.prototype.hasOwnProperty.call(pack,key)) return pack[key];
+  if(Object.prototype.hasOwnProperty.call(I18N.en,key)) return I18N.en[key];
+  if(fallback!=null && fallback!=='') return fallback;
+  return String(key||'').replace(/[._]/g,' ');
+}
+function trf(key,params){
+  let s=tr(key);
+  const p=params||{};
+  Object.keys(p).forEach(k=>{ s=s.split('{'+k+'}').join(p[k]); });
+  return s;
+}
+function colLabel(c){ return tr('col.'+c.key, c.label); }
+function dataTypeLabel(v){ return DT_KEY[v]?tr(DT_KEY[v]):(v||''); }
+function prLabel(v){ return PR_KEY[v]?tr(PR_KEY[v]):v; }
+function stLabel(v){ return ST_KEY[v]?tr(ST_KEY[v]):v; }
+function debounce(fn,ms){ let t; return function(){ const a=arguments,c=this; clearTimeout(t); t=setTimeout(()=>fn.apply(c,a),ms); }; }
+function rafThrottle(fn){ let p=false; return function(){ if(p) return; p=true; const a=arguments,c=this;
+  requestAnimationFrame(()=>{ p=false; fn.apply(c,a); }); }; }
+
+/* ============================================================================
+   4. WEB WORKER (Excel parsing off main thread)
+   ============================================================================ */
+const WORKER_SRC=`
+self.onmessage=function(e){
+  var d=e.data;
+  try{
+    if(d.action==='parse'){
+      importScripts('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+      var wb=XLSX.read(d.buffer,{type:'array',cellDates:false});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+      self.postMessage({id:d.id,ok:true,aoa:aoa});
+    }
+  }catch(err){
+    self.postMessage({id:d.id,ok:false,error:String(err&&err.message||err)});
+  }
+};`;
+let worker=null, workerSeq=0, workerPending={};
+function getWorker(){
+  if(worker) return worker;
+  try{
+    const blob=new Blob([WORKER_SRC],{type:'application/javascript'});
+    worker=new Worker(URL.createObjectURL(blob));
+    worker.onmessage=e=>{
+      const {id,ok,aoa,error}=e.data||{};
+      const cb=workerPending[id]; if(!cb) return;
+      delete workerPending[id];
+      if(ok) cb.resolve(aoa); else cb.reject(new Error(error||'worker error'));
+    };
+    worker.onerror=()=>{ worker=null; };
+  }catch(e){ worker=null; }
+  return worker;
+}
+function workerParse(buffer){
+  return new Promise((resolve,reject)=>{
+    const w=getWorker();
+    if(!w) return reject(new Error('no worker'));
+    const id=++workerSeq;
+    workerPending[id]={resolve,reject};
+    setTimeout(()=>{ if(workerPending[id]){ delete workerPending[id]; reject(new Error('timeout')); } },20000);
+    try{ w.postMessage({id,action:'parse',buffer},{transfer:[buffer]}); }
+    catch(err){ delete workerPending[id]; reject(err); }
+  });
+}
+
+/* ============================================================================
+   5. INDEXEDDB
+   ============================================================================ */
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded=e=>{ const db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id'}); };
+    r.onsuccess=e=>res(e.target.result);
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function dbPut(obj){ const db=await openDB(); return new Promise((res,rej)=>{
+  const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(obj);
+  tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function dbAll(){ const db=await openDB(); return new Promise((res,rej)=>{
+  const tx=db.transaction(STORE,'readonly'); const rq=tx.objectStore(STORE).getAll();
+  rq.onsuccess=()=>res(rq.result||[]); rq.onerror=()=>rej(rq.error); }); }
+async function dbDelete(id){ const db=await openDB(); return new Promise((res,rej)=>{
+  const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id);
+  tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+
+/* ============================================================================
+   6. PREFERENCES
+   ============================================================================ */
+function loadPrefs(){
+  try{
+    const p=JSON.parse(localStorage.getItem(LS_PREFS)||'{}');
+    state.lang=p.lang||'en'; state.theme=p.theme||'dark';
+    state.sidebarOpen=p.sidebarOpen!==false;
+    state.mode=p.mode||'all';
+    state.transferDays=p.transferDays||30;
+  }catch(e){}
+  try{ state.settings=Object.assign(state.settings,JSON.parse(localStorage.getItem(LS_SETTINGS)||'{}')); }catch(e){}
+  try{ state.layout=JSON.parse(localStorage.getItem(LS_LAYOUT)||'{}'); }catch(e){ state.layout={}; }
+}
+function savePrefs(){
+  localStorage.setItem(LS_PREFS,JSON.stringify({
+    lang:state.lang,theme:state.theme,sidebarOpen:state.sidebarOpen,
+    mode:state.mode,transferDays:state.transferDays
+  }));
+}
+function saveSettings(){ localStorage.setItem(LS_SETTINGS,JSON.stringify(state.settings)); }
+function loadTablePrefs(){
+  try{
+    const p=JSON.parse(localStorage.getItem(LS_TABLES)||'{}');
+    Object.keys(p).forEach(id=>{
+      const st=getTableState(id);
+      if(p[id].widths) st.widths=p[id].widths;
+      if(p[id].hidden) st.hidden=new Set(p[id].hidden);
+      if(p[id].order) st.order=p[id].order;
+      if(p[id].pageSize) st.pageSize=p[id].pageSize;
+    });
+  }catch(e){}
+}
+function saveTablePrefs(){
+  const o={};
+  Object.keys(tableState).forEach(id=>{
+    const st=tableState[id];
+    o[id]={widths:st.widths,hidden:[...st.hidden],order:st.order,pageSize:st.pageSize};
+  });
+  localStorage.setItem(LS_TABLES,JSON.stringify(o));
+}
+
+/* ============================================================================
+   7. THEME / LANGUAGE
+   ============================================================================ */
+function applyTheme(){
+  document.body.classList.toggle('light',state.theme==='light');
+  $('#btnTheme').textContent = state.theme==='light' ? '☀️' : '🌙';
+  refreshChartsTheme();
+}
+function updateViewTitle(){ $('#viewTitle').textContent=tr(VIEW_TITLE_KEY[state.view]||'nav.dashboard'); }
+function applyLang(){
+  document.documentElement.lang=state.lang;
+  document.documentElement.dir = state.lang==='ar' ? 'rtl':'ltr';
+  document.title = tr('app.docTitle');
+  $$('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n'); if(!k) return;
+    el.textContent=tr(k, el.textContent);
+  });
+  $$('[data-i18n-ph]').forEach(el=>{ el.placeholder=tr(el.getAttribute('data-i18n-ph')); });
+  $$('[data-i18n-title]').forEach(el=>{ el.title=tr(el.getAttribute('data-i18n-title')); });
+  $('#btnLang').textContent = state.lang==='ar' ? 'English' : 'العربية';
+  $('#btnTheme').textContent = state.theme==='light' ? '☀️' : '🌙';
+  renderDatasetSelect(); renderBranchDropdown(); renderSubgroupSelect();
+  buildFilterUI(); updateViewTitle();
+  /* force table rebuild to re-translate headers */
+  Object.keys(tableState).forEach(id=>{ tableState[id].sig=''; });
+  renderAll();
+}
+
+/* ============================================================================
+   8. EXCEL PARSING
+   ============================================================================ */
+const HEADER_MAP={
+  itemcode:'itemCode', itemcode1:'itemCode', code:'itemCode', itemno:'itemCode',
+  itemname:'itemName', itemdescription:'itemName', description:'itemName', item:'itemName',
+  branchcode:'branchCode', branch:'branchCode', branchname:'branchCode',
+  subgroupcode:'subgroupCode', subgroup:'subgroupCode',
+  subgroupname:'subgroupName', groupname:'subgroupName', subgrouptname:'subgroupName',
+  unit:'unit', uom:'unit', units:'unit',
+  netsalesquantity:'qty', netsalesqty:'qty', salesquantity:'qty', qty:'qty', quantity:'qty', netsales:'qty',
+  netinvoice:'invoice', netsalesamount:'invoice', salesamount:'invoice', invoice:'invoice', netamount:'invoice',
+  cost:'cost', totalcost:'cost', costamount:'cost',
+  profit:'profit', netprofit:'profit', grossprofit:'profit',
+  profitmarginpercentage:'margin', profitmargin:'margin', margin:'margin', marginpercentage:'margin', profitmarginpct:'margin',
+  availablestockquantity:'stock', availablestock:'stock', stockquantity:'stock', stock:'stock',
+  availablequantity:'stock', availableqty:'stock', onhand:'stock', balance:'stock'
+};
+const normHeader=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+
+function mapHeaders(row){
+  const map={};
+  if(!row) return map;
+  row.forEach((h,i)=>{
+    const k=normHeader(h); if(!k) return;
+    if(HEADER_MAP[k]) map[i]=HEADER_MAP[k];
+    else{
+      if(k.includes('item')&&k.includes('code')) map[i]='itemCode';
+      else if(k.includes('item')&&k.includes('name')) map[i]='itemName';
+      else if(k.includes('branch')) map[i]='branchCode';
+      else if(k.includes('subgroup')&&k.includes('name')) map[i]='subgroupName';
+      else if(k.includes('subgroup')) map[i]='subgroupCode';
+      else if(k==='unit'||k==='uom') map[i]='unit';
+      else if(k.includes('margin')) map[i]='margin';
+      else if(k.includes('stock')||k.includes('available')) map[i]='stock';
+      else if(k.includes('invoice')||k.includes('salesamount')) map[i]='invoice';
+      else if(k.includes('profit')) map[i]='profit';
+      else if(k.includes('cost')) map[i]='cost';
+      else if(k.includes('qty')||k.includes('quantity')) map[i]='qty';
+    }
+  });
+  return map;
+}
+function normalizeRow(r){
+  const o={
+    itemCode:str(r.itemCode), itemName:str(r.itemName), branchCode:str(r.branchCode)||'UNKNOWN',
+    subgroupCode:str(r.subgroupCode), subgroupName:str(r.subgroupName)||'—',
+    unit:str(r.unit)||'PCS',
+    qty:num(r.qty), invoice:num(r.invoice), cost:num(r.cost), profit:num(r.profit),
+    margin:num(r.margin), stock:num(r.stock)
+  };
+  if(!o.margin && o.invoice) o.margin=(o.profit/o.invoice)*100;
+  return o;
+}
+function aoaToRows(aoa){
+  if(!aoa||!aoa.length) return [];
+  let hdrIdx=-1,mapping=null;
+  for(let i=0;i<Math.min(aoa.length,20);i++){
+    const m=mapHeaders(aoa[i]);
+    if(Object.keys(m).length>=4){ hdrIdx=i; mapping=m; break; }
+  }
+  if(hdrIdx<0){
+    hdrIdx=0;
+    mapping={0:'itemCode',1:'itemName',2:'branchCode',3:'subgroupCode',4:'subgroupName',
+             5:'unit',6:'qty',7:'invoice',8:'cost',9:'profit',10:'margin',11:'stock'};
+  }
+  const keys=Object.keys(mapping);
+  const rows=[];
+  for(let i=hdrIdx+1;i<aoa.length;i++){
+    const raw=aoa[i]; if(!raw||!raw.length) continue;
+    const r={};
+    for(let j=0;j<keys.length;j++) r[mapping[keys[j]]]=raw[keys[j]];
+    if((r.itemCode==null||r.itemCode==='')&&(r.itemName==null||r.itemName==='')) continue;
+    rows.push(normalizeRow(r));
+  }
+  return rows;
+}
+function parseOnMainThread(arrayBuffer){
+  const wb=XLSX.read(new Uint8Array(arrayBuffer),{type:'array',cellDates:false});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null,blankrows:false});
+  return aoaToRows(aoa);
+}
+
+/* ============================================================================
+   9. DATASET MANAGEMENT
+   ============================================================================ */
+function activeDataset(){ return state.datasets.find(d=>d.id===state.activeId)||null; }
+function allRows(){ const d=activeDataset(); return d?d.rows:[]; }
+
+async function refreshDatasets(){
+  state.datasets=await dbAll();
+  state.datasets.sort((a,b)=>(b.uploadDate||0)-(a.uploadDate||0));
+  if(state.activeId && !state.datasets.find(d=>d.id===state.activeId)) state.activeId=null;
+  if(!state.activeId && state.datasets.length) state.activeId=state.datasets[0].id;
+  if(state.activeId){
+    const d=activeDataset();
+    state.periodDays=d.periodDays||30; state.dataType=d.dataType||'Daily Sales Data';
+  }
+  renderDatasetSelect(); renderHistory(); renderBranchDropdown(); renderSubgroupSelect(); buildFilterUI();
+  invalidateGlobal();
+}
+function renderDatasetSelect(){
+  const sel=$('#datasetSelect'); sel.innerHTML='';
+  if(!state.datasets.length){
+    const o=document.createElement('option'); o.textContent='— '+tr('opt.noFile')+' —';
+    sel.appendChild(o); return;
+  }
+  state.datasets.forEach(d=>{
+    const o=document.createElement('option');
+    o.value=d.id;
+    o.textContent=`${d.fileName} (${trf('hist.days',{n:d.periodDays})})`;
+    if(d.id===state.activeId) o.selected=true;
+    sel.appendChild(o);
+  });
+}
+
+/* ============================================================================
+   10. CENTRAL DATA ENGINE  (memoized global state)
+   ============================================================================ */
+const memo={key:null,rows:[],agg:null,classify:null,branchAgg:[],itemAgg:[],sgAgg:[],genTime:0,tKey:null,tRecs:[],hit:0};
+
+function invalidateGlobal(){ memo.key=null; memo.tKey=null; }
+
+function globalSignature(){
+  return [
+    state.activeId||'none',
+    state.mode, state.branch, state.branches.slice().sort().join(','),
+    state.quick.subgroup||'', state.quick.search||'',
+    JSON.stringify(state.filters),
+    state.periodDays,
+    state.settings.safetyStock, state.settings.lowStock,
+    state.settings.fastMoving, state.settings.overstockDays, state.settings.overstockQty
+  ].join('|');
+}
+
+function compileFilters(filters, colMap){
+  const list=[];
+  for(const k in filters){
+    const f=filters[k]; if(!f||!f.active) continue;
+    const c=colMap[k]; if(!c) continue;
+    const item={g:c.get||(r=>r[k]), type:c.type, op:f.op};
+    if(f.values&&f.values.length) item.set=new Set(f.values.map(String));
+    if(c.type==='num'){ item.v1=Number(f.v1); item.v2=Number(f.v2); }
+    else { item.v1=String(f.v1||'').toLowerCase(); }
+    list.push(item);
+  }
+  return list;
+}
+function applyCompiled(rows, list){
+  if(!list.length) return rows;
+  const n=rows.length, out=[];
+  outer: for(let i=0;i<n;i++){
+    const r=rows[i];
+    for(let j=0;j<list.length;j++){
+      const f=list[j];
+      const v=f.g(r);
+      if(f.set && !f.set.has(String(v))) continue outer;
+      if(f.type==='num'){
+        const x=Number(v)||0;
+        if(f.op==='gt'&&!(x>f.v1)) continue outer;
+        if(f.op==='lt'&&!(x<f.v1)) continue outer;
+        if(f.op==='eq'&&x!==f.v1) continue outer;
+        if(f.op==='between'&&(x<f.v1||x>f.v2)) continue outer;
+      }else{
+        const s=String(v==null?'':v).toLowerCase();
+        if(f.op==='contains'&&s.indexOf(f.v1)===-1) continue outer;
+        if(f.op==='ncontains'&&s.indexOf(f.v1)!==-1) continue outer;
+        if(f.op==='startswith'&&s.indexOf(f.v1)!==0) continue outer;
+        if(f.op==='endswith'&&s.slice(-f.v1.length)!==f.v1) continue outer;
+        if(f.op==='eq'&&s!==f.v1) continue outer;
+      }
+    }
+    out.push(r);
+  }
+  return out;
+}
+
+function ensureGlobal(){
+  const key=globalSignature();
+  if(memo.key===key){ memo.hit++; return memo; }
+  const t0=performance.now();
+
+  let rows=allRows();
+
+  /* branch scope */
+  if(state.mode==='single' && state.branch){
+    rows=rows.filter(r=>r.branchCode===state.branch);
+  }else if(state.mode==='multi' && state.branches.length){
+    const set=new Set(state.branches);
+    rows=rows.filter(r=>set.has(r.branchCode));
+  }
+  /* global drawer filters */
+  rows=applyCompiled(rows, compileFilters(state.filters, RAW_COLMAP));
+  /* quick filters */
+  if(state.quick.subgroup) rows=rows.filter(r=>r.subgroupName===state.quick.subgroup);
+  if(state.quick.search){
+    const q=state.quick.search.toLowerCase();
+    rows=rows.filter(r=>(r.itemName||'').toLowerCase().indexOf(q)!==-1 || (r.itemCode||'').toLowerCase().indexOf(q)!==-1);
+  }
+
+  memo.key=key; memo.rows=rows;
+  memo.agg=computeAgg(rows);
+  memo.classify=computeClassify(rows);
+  memo.branchAgg=buildBranchAgg(rows);
+  memo.itemAgg=buildItemAgg(rows);
+  memo.sgAgg=buildSubgroupAgg(rows);
+  memo.genTime=performance.now()-t0;
+  return memo;
+}
+
+function computeAgg(rows){
+  let qty=0,invoice=0,cost=0,profit=0,stock=0;
+  const items=new Set(), branches=new Set();
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    qty+=r.qty; invoice+=r.invoice; cost+=r.cost; profit+=r.profit; stock+=r.stock;
+    items.add(r.itemCode); branches.add(r.branchCode);
+  }
+  return {qty,invoice,cost,profit,stock,margin:invoice?(profit/invoice)*100:0,
+          itemCount:items.size,branchCount:branches.size};
+}
+function computeClassify(rows){
+  const s=state.settings, p=state.periodDays||30;
+  let oos=0,low=0,over=0,fast=0;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i], ads=r.qty/p;
+    if(r.stock<=0) oos++;
+    else if(r.stock<=s.lowStock) low++;
+    if(r.stock>0 && ((ads>0 && r.stock>ads*s.overstockDays) || (ads<=0 && r.stock>=s.overstockQty))) over++;
+    if(ads>=s.fastMoving) fast++;
+  }
+  return {oos,low,over,fast};
+}
+function buildBranchAgg(rows){
+  const m=new Map();
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    let b=m.get(r.branchCode);
+    if(!b){ b={branchCode:r.branchCode,qty:0,invoice:0,cost:0,profit:0,stock:0,items:new Set(),oos:0,low:0}; m.set(r.branchCode,b); }
+    b.qty+=r.qty; b.invoice+=r.invoice; b.cost+=r.cost; b.profit+=r.profit; b.stock+=r.stock;
+    b.items.add(r.itemCode);
+    if(r.stock<=0) b.oos++; else if(r.stock<=state.settings.lowStock) b.low++;
+  }
+  const arr=[];
+  m.forEach(b=>{ b.itemCount=b.items.size; b.margin=b.invoice?(b.profit/b.invoice)*100:0; arr.push(b); });
+  arr.sort((a,b)=>b.invoice-a.invoice);
+  return arr;
+}
+function buildItemAgg(rows){
+  const m=new Map();
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    let o=m.get(r.itemCode);
+    if(!o){ o={itemCode:r.itemCode,itemName:r.itemName,subgroupName:r.subgroupName,unit:r.unit,
+               qty:0,invoice:0,cost:0,profit:0,stock:0,branchCount:0}; m.set(r.itemCode,o); }
+    o.qty+=r.qty; o.invoice+=r.invoice; o.cost+=r.cost; o.profit+=r.profit; o.stock+=r.stock;
+    o.branchCount++;
+  }
+  const arr=[];
+  m.forEach(o=>{ o.margin=o.invoice?(o.profit/o.invoice)*100:0; o.ads=o.qty/(state.periodDays||30); arr.push(o); });
+  arr.sort((a,b)=>b.qty-a.qty);
+  return arr;
+}
+function buildSubgroupAgg(rows){
+  const m=new Map();
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    let o=m.get(r.subgroupName);
+    if(!o){ o={subgroupName:r.subgroupName,qty:0,invoice:0,profit:0,stock:0,items:new Set()}; m.set(r.subgroupName,o); }
+    o.qty+=r.qty; o.invoice+=r.invoice; o.profit+=r.profit; o.stock+=r.stock; o.items.add(r.itemCode);
+  }
+  const arr=[];
+  m.forEach(o=>{ o.margin=o.invoice?(o.profit/o.invoice)*100:0; o.itemCount=o.items.size; arr.push(o); });
+  arr.sort((a,b)=>b.invoice-a.invoice);
+  return arr;
+}
+
+/* ============================================================================
+   11. GLOBAL FILTERS DRAWER (unchanged behaviour)
+   ============================================================================ */
+function clearAllFilters(){
+  state.filters={}; state.quick={subgroup:'',search:''};
+  $('#subgroupSelect').value=''; $('#itemSearch').value='';
+  buildFilterUI(); invalidateGlobal(); renderAll();
+}
+function activeFilterList(){
+  const out=[];
+  COLUMNS.forEach(c=>{
+    const f=state.filters[c.key]; if(!f||!f.active) return;
+    let desc='';
+    if(f.op==='contains') desc=trf('filt.d.contains',{v:f.v1});
+    else if(f.op==='ncontains') desc=trf('filt.d.ncontains',{v:f.v1});
+    else if(f.op==='startswith') desc=trf('filt.d.startswith',{v:f.v1});
+    else if(f.op==='endswith') desc=trf('filt.d.endswith',{v:f.v1});
+    else if(f.op==='eq') desc=trf('filt.d.eq',{v:f.v1});
+    else if(f.op==='gt') desc=trf('filt.d.gt',{v:f.v1});
+    else if(f.op==='lt') desc=trf('filt.d.lt',{v:f.v1});
+    else if(f.op==='between') desc=trf('filt.d.between',{a:f.v1,b:f.v2});
+    if(f.values&&f.values.length){
+      const extra=trf('filt.d.values',{n:f.values.length});
+      desc = desc ? desc+' • '+extra : extra;
+    }
+    out.push({key:c.key,label:colLabel(c),desc});
+  });
+  if(state.quick.subgroup) out.push({key:'_sg',label:tr('ctl.subgroup'),desc:state.quick.subgroup});
+  if(state.quick.search) out.push({key:'_q',label:tr('ctl.search'),desc:state.quick.search});
+  return out;
+}
+function buildFilterUI(){
+  const body=$('#filterBody'); if(!body) return;
+  const rows=allRows(); body.innerHTML='';
+  COLUMNS.forEach(col=>{
+    const block=document.createElement('div');
+    block.className='fblock'; block.dataset.col=col.key;
+    const f=state.filters[col.key]||{op:col.type==='num'?'gt':'contains',v1:'',v2:'',values:[],active:false};
+    if(f.active) block.classList.add('active');
+
+    const seen=new Set(); const distinct=[];
+    for(let i=0;i<rows.length;i++){ const v=String(rows[i][col.key]==null?'':rows[i][col.key]); if(v!==''&&!seen.has(v)){ seen.add(v); distinct.push(v); } }
+    distinct.sort();
+    const shown=distinct.slice(0,200);
+
+    const ops = col.type==='num'
+      ? [['gt','op.gt'],['lt','op.lt'],['eq','op.numeq'],['between','op.between']]
+      : [['contains','op.contains'],['ncontains','op.ncontains'],['startswith','op.startswith'],['endswith','op.endswith'],['eq','op.eq']];
+
+    block.innerHTML=`
+      <div class="fhead"><b>${esc(colLabel(col))}</b>
+        <button class="fclear" data-col="${col.key}">${esc(tr('filt.clear'))}</button></div>
+      <div class="frow">
+        <select class="fop">${ops.map(([v,k])=>`<option value="${v}" ${f.op===v?'selected':''}>${esc(tr(k))}</option>`).join('')}</select>
+        <input class="fv1" type="${col.type==='num'?'number':'text'}" placeholder="${esc(col.type==='num'?tr('filt.value'):tr('filt.text'))}" value="${esc(f.v1??'')}">
+        <input class="fv2" type="number" placeholder="${esc(tr('filt.max'))}" value="${esc(f.v2??'')}" style="display:${f.op==='between'?'block':'none'}">
+      </div>
+      <div class="fvals">${shown.length? shown.map(v=>`<label><input type="checkbox" value="${esc(v)}" ${(f.values||[]).includes(v)?'checked':''}><span>${esc(v)}</span></label>`).join('') : `<div class="mini" style="padding:4px">${esc(tr('filt.novalues'))}</div>`}</div>`;
+
+    const opSel=block.querySelector('.fop'), v1=block.querySelector('.fv1'), v2=block.querySelector('.fv2');
+    const sync=debounce(()=>{
+      const cur={op:opSel.value,v1:v1.value,v2:v2.value,
+        values:[...block.querySelectorAll('.fvals input:checked')].map(i=>i.value)};
+      cur.active=!!(cur.v1!==''||(cur.op==='between'&&cur.v2!=='')||(cur.values&&cur.values.length));
+      state.filters[col.key]=cur;
+      block.classList.toggle('active',cur.active);
+      invalidateGlobal(); renderAll();
+    },300);
+    opSel.addEventListener('change',()=>{ v2.style.display=opSel.value==='between'?'block':'none'; sync(); });
+    v1.addEventListener('input',sync); v2.addEventListener('input',sync);
+    block.querySelectorAll('.fvals input').forEach(cb=>cb.addEventListener('change',sync));
+    block.querySelector('.fclear').addEventListener('click',()=>{
+      delete state.filters[col.key]; block.classList.remove('active');
+      buildFilterUI(); invalidateGlobal(); renderAll();
+    });
+    body.appendChild(block);
+  });
+}
+function renderFilterChips(){
+  const list=activeFilterList(); const el=$('#activeFilterChips');
+  if(!list.length){ el.innerHTML=''; return; }
+  el.innerHTML=list.map(f=>`<span class="chip"><b>${esc(f.label)}</b> ${esc(f.desc)}
+    <button data-rm="${esc(f.key)}" title="${esc(tr('chip.remove'))}">✕</button></span>`).join('')
+    + `<span class="chip" style="background:rgba(255,92,115,.13);border-color:rgba(255,92,115,.4)"><b>${esc(trf('chip.active',{n:list.length}))}</b></span>`;
+  el.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{
+    const k=b.dataset.rm;
+    if(k==='_sg'){ state.quick.subgroup=''; $('#subgroupSelect').value=''; }
+    else if(k==='_q'){ state.quick.search=''; $('#itemSearch').value=''; }
+    else delete state.filters[k];
+    buildFilterUI(); invalidateGlobal(); renderAll();
+  }));
+}
+
+/* ============================================================================
+   12. TRANSFER ENGINE (business logic unchanged, memoized)
+   ============================================================================ */
+function computeTransferRecs(){
+  const key=memo.key+'|td'+state.transferDays+'|ss'+state.settings.safetyStock;
+  if(memo.tKey===key) return memo.tRecs;
+
+  const rows=memo.rows;
+  const days=state.transferDays;
+  const safety=Number(state.settings.safetyStock)||0;
+  const period=state.periodDays||30;
+
+  const byItem=new Map();
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    let it=byItem.get(r.itemCode);
+    if(!it){ it={itemCode:r.itemCode,itemName:r.itemName,subgroupName:r.subgroupName,unit:r.unit,branches:new Map()}; byItem.set(r.itemCode,it); }
+    let b=it.branches.get(r.branchCode);
+    if(!b){ b={branchCode:r.branchCode,stock:0,qty:0}; it.branches.set(r.branchCode,b); }
+    b.stock+=r.stock; b.qty+=r.qty;
+  }
+
+  const out=[];
+  byItem.forEach(it=>{
+    const entries=[...it.branches.values()];
+    const dests=entries.filter(b=>b.stock<=0 && b.qty>0);
+    if(!dests.length) return;
+
+    const sources=[];
+    for(let i=0;i<entries.length;i++){
+      const b=entries[i];
+      const tf=b.stock-safety;
+      if(tf>0) sources.push({branchCode:b.branchCode,stock:b.stock,qty:b.qty,transferable:tf,velocity:b.qty/period,used:0});
+    }
+    if(!sources.length) return;
+    sources.sort((a,b)=> b.transferable-a.transferable || a.velocity-b.velocity);
+
+    for(let di=0;di<dests.length;di++){
+      const d=dests[di];
+      const avgDaily=d.qty/period;
+      if(avgDaily<=0) continue;
+      const required=avgDaily*days;
+      let remaining=required;
+      const alloc=[];
+      for(let si=0;si<sources.length;si++){
+        if(remaining<=0.001) break;
+        const s=sources[si];
+        if(s.branchCode===d.branchCode) continue;
+        const avail=s.transferable-s.used;
+        if(avail<=0) continue;
+        const take=Math.min(remaining,avail);
+        s.used+=take; remaining-=take;
+        alloc.push({source:s.branchCode,sourceStock:s.stock,transferable:s.transferable,sourceSafety:safety,qty:take});
+      }
+      if(!alloc.length) continue;
+      const totalQty=alloc.reduce((a,x)=>a+x.qty,0);
+      if(totalQty<=0) continue;
+
+      const k=it.itemCode+'|'+d.branchCode;
+      const st=state.transferStatus[k]||{};
+      out.push({
+        key:k,itemCode:it.itemCode,itemName:it.itemName,subgroupName:it.subgroupName,unit:it.unit,
+        destBranch:d.branchCode,destStock:d.stock,destSalesQty:d.qty,
+        period,avgDaily,transferDays:days,requiredQty:required,
+        sources:alloc,primarySource:alloc[0].source,primarySourceStock:alloc[0].sourceStock,
+        sourceSafety:safety,
+        transferableStock:alloc.reduce((a,x)=>a+x.transferable,0),
+        finalQty:Math.max(1,Math.round(st.qty!=null?st.qty:totalQty)),
+        priority: avgDaily>=3?'High':avgDaily>=1?'Medium':'Low',
+        status: st.status||'Pending'
+      });
+    }
+  });
+  out.sort((a,b)=>b.finalQty-a.finalQty);
+  memo.tKey=key; memo.tRecs=out;
+  return out;
+}
+function setTransferStatus(key,status){
+  state.transferStatus[key]=Object.assign(state.transferStatus[key]||{},{status});
+  memo.tKey=null;
+  renderTable('transferTable'); renderTable('branchReport');
+}
+
+/* ============================================================================
+   13. TABLE ENGINE
+   ============================================================================ */
+const tableState={};
+function getTableState(id){
+  if(!tableState[id]){
+    tableState[id]={
+      page:0, pageSize:50, sort:{col:null,dir:1},
+      filters:{}, search:'', hidden:new Set(), widths:{}, order:null,
+      sig:'', filtRows:null, sortRows:null
+    };
+  }
+  return tableState[id];
+}
+function tableActiveFilters(st){ return Object.keys(st.filters).filter(k=>st.filters[k]&&st.filters[k].active); }
+
+function compileTableFilters(st, colMap){
+  const list=[];
+  const keys=Object.keys(st.filters);
+  for(let i=0;i<keys.length;i++){
+    const k=keys[i]; const f=st.filters[k]; if(!f||!f.active) continue;
+    const c=colMap[k]; if(!c) continue;
+    const item={g:c.get||(r=>r[k]), type:c.type, op:f.op};
+    if(f.values&&f.values.length) item.set=new Set(f.values.map(String));
+    if(c.type==='num'){ item.v1=Number(f.v1); item.v2=Number(f.v2); }
+    else { item.v1=String(f.v1||'').toLowerCase(); }
+    list.push(item);
+  }
+  return list;
+}
+
+function visibleColumns(spec, st){
+  let cols=spec.columns.slice();
+  if(st.order && st.order.length){
+    const pos={}; st.order.forEach((k,i)=>pos[k]=i);
+    cols.sort((a,b)=>(pos[a.key]===undefined?999:pos[a.key])-(pos[b.key]===undefined?999:pos[b.key]));
+  }
+  return cols.filter(c=>!st.hidden.has(c.key));
+}
+
+function tableSignature(st, spec, globalKey){
+  return globalKey+'|'+spec.id+'|'+JSON.stringify(st.filters)+'|'+st.search+'|'+
+         st.sort.col+'|'+st.sort.dir+'|'+st.hidden.size;
+}
+
+function computeTableRows(spec, st, globalKey){
+  const sig=tableSignature(st,spec,globalKey);
+  if(st.sig===sig && st.filtRows) return st;
+  const t0=performance.now();
+  let rows=spec.getRows();
+
+  /* table-level column filters */
+  rows=applyCompiled(rows, compileTableFilters(st, spec.colMap));
+
+  /* table-level quick search */
+  if(st.search){
+    const q=st.search.toLowerCase();
+    const acc=spec.searchAccessors;
+    rows=rows.filter(r=>{
+      for(let i=0;i<acc.length;i++){ const v=acc[i](r); if(v!=null && String(v).toLowerCase().indexOf(q)!==-1) return true; }
+      return false;
+    });
+  }
+
+  /* sort */
+  if(st.sort.col){
+    const col=spec.colMap[st.sort.col];
+    if(col){
+      const g=col.get||(r=>r[st.sort.col]);
+      const d=st.sort.dir;
+      if(col.type==='num') rows=rows.slice().sort((a,b)=>(Number(g(a))||0)-(Number(g(b))||0))*0 || rows.slice().sort((a,b)=>((Number(g(a))||0)-(Number(g(b))||0))*d);
+      else rows=rows.slice().sort((a,b)=>String(g(a)==null?'':g(a)).localeCompare(String(g(b)==null?'':g(b)),undefined,{numeric:true,sensitivity:'base'})*d);
+    }
+  }
+
+  st.filtRows=rows;
+  st.sig=sig;
+  st.computeMs=performance.now()-t0;
+  return st;
+}
+
+function renderTable(id){
+  const spec=TABLE_SPECS[id]; if(!spec) return;
+  const el=document.getElementById('tbl-'+id); if(!el) return;
+  if(!el.offsetParent && el.offsetHeight===0 && el.getClientRects().length===0) return;
+
+  const st=getTableState(id);
+  const gkey=memo.key||'';
+  computeTableRows(spec, st, gkey);
+
+  const rows=st.filtRows||[];
+  const total=rows.length;
+  const cols=visibleColumns(spec, st);
+  const pageSize=st.pageSize;
+  const maxPage=Math.max(0,Math.ceil(total/pageSize)-1);
+  if(st.page>maxPage) st.page=maxPage;
+  const start=st.page*pageSize;
+  const pageRows=rows.slice(start,start+pageSize);
+
+  const t0=performance.now();
+
+  /* ---------- toolbar ---------- */
+  const activeCount=tableActiveFilters(st).length + (st.search?1:0);
+  let h='<div class="tbl-toolbar">';
+  h+=`<input type="search" class="tbl-search" data-tblsearch value="${esc(st.search)}" placeholder="${esc(tr('tbl.searchPh'))}">`;
+  h+=`<span class="tbl-count"><b>${fmt(total)}</b> ${activeCount?`(${esc(trf('tbl.ofTotal',{n:fmt(spec.getRows().length)}))})`:''} ${esc(tr('tbl.count')).replace('{n}','').trim()}</span>`;
+  if(activeCount) h+=`<button class="btn sm danger" data-tblact="clearAll">${esc(tr('tbl.clearAll'))}</button>`;
+  h+=`<span class="spacer" style="flex:1"></span>`;
+  h+=`<button class="btn sm glow" data-tblact="cols">${esc(tr('tbl.columns'))} ▾</button>`;
+  h+=`<select data-tblact="pagesize" title="${esc(tr('tbl.rowsPerPage'))}">`+
+      [25,50,100,250,500].map(n=>`<option value="${n}" ${n===st.pageSize?'selected':''}>${n}</option>`).join('')+`</select>`;
+  h+=`<button class="btn sm glow" data-tblact="csv">${esc(tr('tbl.csv'))}</button>`;
+  h+=`<button class="btn sm glow" data-tblact="xlsx">${esc(tr('tbl.xlsx'))}</button>`;
+  h+='</div>';
+
+  /* ---------- active filter chips ---------- */
+  if(activeCount){
+    h+='<div class="tbl-chips">';
+    tableActiveFilters(st).forEach(k=>{
+      const c=spec.colMap[k]; if(!c) return;
+      const f=st.filters[k]; let d='';
+      if(f.op==='contains') d=trf('filt.d.contains',{v:f.v1});
+      else if(f.op==='ncontains') d=trf('filt.d.ncontains',{v:f.v1});
+      else if(f.op==='startswith') d=trf('filt.d.startswith',{v:f.v1});
+      else if(f.op==='endswith') d=trf('filt.d.endswith',{v:f.v1});
+      else if(f.op==='eq') d=trf('filt.d.eq',{v:f.v1});
+      else if(f.op==='gt') d=trf('filt.d.gt',{v:f.v1});
+      else if(f.op==='lt') d=trf('filt.d.lt',{v:f.v1});
+      else if(f.op==='between') d=trf('filt.d.between',{a:f.v1,b:f.v2});
+      if(f.values&&f.values.length) d+=(d?' • ':'')+trf('filt.d.values',{n:f.values.length});
+      h+=`<span class="tbl-chip"><b>${esc(c.label)}</b> ${esc(d)}<button data-tblrm="${esc(k)}">✕</button></span>`;
+    });
+    h+='</div>';
+  }
+
+  /* ---------- table ---------- */
+  const widths=cols.map(c=>st.widths[c.key]||c.width||130);
+  const totalW=widths.reduce((a,b)=>a+b,0);
+
+  h+='<div class="tbl-scroll"><table class="dt" style="width:'+totalW+'px">';
+  h+='<colgroup>'+widths.map(w=>`<col style="width:${w}px">`).join('')+'</colgroup>';
+  h+='<thead><tr>';
+  cols.forEach(c=>{
+    const sorted=st.sort.col===c.key;
+    const arrow=sorted ? (st.sort.dir===1?'▲':'▼') : '';
+    const hasF=(st.filters[c.key]&&st.filters[c.key].active);
+    h+=`<th data-thcol="${esc(c.key)}" draggable="true" class="${c.sortable===false?'':'sortable'}" title="${esc(c.label)}">`+
+       `<div class="th-inner">`+
+       `<span class="th-label">${esc(c.label)}</span>`+
+       `<span class="th-sort">${arrow}</span>`+
+       `<button class="th-filter ${hasF?'active':''}" data-fcol="${esc(c.key)}" title="${esc(tr('tbl.filter'))}">▼</button>`+
+       `</div><div class="th-resize" data-rcol="${esc(c.key)}"></div></th>`;
+  });
+  h+='</tr></thead><tbody>';
+
+  if(!pageRows.length){
+    h+=`<tr><td colspan="${cols.length}" style="padding:0;border:none">
+      <div class="tbl-empty"><div class="big">▤</div><h3>${esc(tr('tbl.noData'))}</h3><p>${esc(tr('tbl.noDataDesc'))}</p></div>
+    </td></tr>`;
+  }else{
+    for(let i=0;i<pageRows.length;i++){
+      const r=pageRows[i];
+      h+='<tr>';
+      for(let j=0;j<cols.length;j++){
+        const c=cols[j];
+        const raw=c.get?c.get(r):r[c.key];
+        const txt = c.render ? c.render(r) : (raw==null?'':esc(c.type==='num'?fmt(raw, c.dec||0):raw));
+        h+=`<td class="${c.type==='num'?'num':''}">${txt}</td>`;
+      }
+      h+='</tr>';
+    }
+  }
+  h+='</tbody></table></div>';
+
+  /* ---------- pager ---------- */
+  h+='<div class="tbl-pager">';
+  h+=`<button data-tblact="first" ${st.page===0?'disabled':''}>«</button>`;
+  h+=`<button data-tblact="prev" ${st.page===0?'disabled':''}>${esc(tr('tbl.prev'))}</button>`;
+  h+=`<span>${esc(trf('tbl.page',{p:st.page+1,t:maxPage+1}))}</span>`;
+  h+=`<button data-tblact="next" ${st.page>=maxPage?'disabled':''}>${esc(tr('tbl.next'))}</button>`;
+  h+=`<button data-tblact="last" ${st.page>=maxPage?'disabled':''}>»</button>`;
+  h+=`<span class="spacer" style="flex:1"></span>`;
+  h+=`<span class="mini">${fmt(start+1)}–${fmt(Math.min(start+pageSize,total))} / ${fmt(total)}</span>`;
+  h+='</div>';
+
+  el.innerHTML=h;
+  state.perf.lastRender=performance.now()-t0;
+  state.perf.tablesRendered++;
+
+  bindTableEvents(id, el, spec, st);
+}
+
+function bindTableEvents(id, el, spec, st){
+  /* search */
+  const search=el.querySelector('[data-tblsearch]');
+  if(search){
+    const onSearch=debounce(()=>{ st.search=search.value.trim(); st.page=0; renderTable(id); },250);
+    search.addEventListener('input',onSearch);
+  }
+
+  /* header sort + filter + resize + drag */
+  el.querySelectorAll('th[data-thcol]').forEach(th=>{
+    const key=th.dataset.thcol;
+
+    th.addEventListener('click',e=>{
+      if(e.target.closest('.th-filter')||e.target.closest('.th-resize')) return;
+      if(st.sort.col===key){ st.sort.dir=st.sort.dir===1?-1:1; if(st.sort.dir===1 && e.detail===1){} }
+      else { st.sort.col=key; st.sort.dir=1; }
+      /* cycle: asc -> desc -> none */
+      if(st.sort.col===key && st.sort.dir===-1 && st._lastKey===key && st._lastDir===-1){
+        st.sort.col=null; st.sort.dir=1;
+      }
+      st._lastKey=st.sort.col; st._lastDir=st.sort.dir;
+      st.page=0; st.sig=''; renderTable(id);
+    });
+
+    const fb=th.querySelector('.th-filter');
+    if(fb) fb.addEventListener('click',e=>{ e.stopPropagation(); openFilterPopup(id,key,fb); });
+
+    const rz=th.querySelector('.th-resize');
+    if(rz) rz.addEventListener('mousedown',e=>{
+      e.preventDefault(); e.stopPropagation();
+      const startX=e.clientX;
+      const startW=st.widths[key]||spec.colMap[key].width||130;
+      const colEl=el.querySelectorAll('colgroup col')[ [...el.querySelectorAll('th[data-thcol]')].findIndex(t=>t.dataset.thcol===key) ];
+      document.body.classList.add('resizing');
+      function move(ev){
+        const w=Math.max(60,startW+(ev.clientX-startX));
+        st.widths[key]=w;
+        if(colEl) colEl.style.width=w+'px';
+      }
+      function up(){
+        document.removeEventListener('mousemove',move);
+        document.removeEventListener('mouseup',up);
+        document.body.classList.remove('resizing');
+        saveTablePrefs();
+        renderTable(id);
+      }
+      document.addEventListener('mousemove',move);
+      document.addEventListener('mouseup',up);
+    });
+
+    th.addEventListener('dragstart',e=>{
+      e.dataTransfer.setData('text/plain',key);
+      e.dataTransfer.effectAllowed='move';
+    });
+    th.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+    th.addEventListener('drop',e=>{
+      e.preventDefault();
+      const from=e.dataTransfer.getData('text/plain');
+      if(!from||from===key) return;
+      const cur=visibleColumns(spec,st).map(c=>c.key);
+      const fromIdx=cur.indexOf(from), toIdx=cur.indexOf(key);
+      if(fromIdx<0||toIdx<0) return;
+      cur.splice(toIdx,0,cur.splice(fromIdx,1)[0]);
+      /* keep hidden ones at end */
+      const hiddenKeys=[...st.hidden];
+      st.order=cur.concat(hiddenKeys);
+      saveTablePrefs();
+      renderTable(id);
+    });
+  });
+
+  /* toolbar actions */
+  el.querySelectorAll('[data-tblact]').forEach(btn=>{
+    const act=btn.dataset.tblact;
+    if(act==='pagesize'){
+      btn.addEventListener('change',()=>{ st.pageSize=Number(btn.value)||50; st.page=0; saveTablePrefs(); renderTable(id); });
+      return;
+    }
+    btn.addEventListener('click',()=>{
+      if(act==='clearAll'){ st.filters={}; st.search=''; st.page=0; st.sig=''; renderTable(id); }
+      else if(act==='first'){ st.page=0; renderTable(id); }
+      else if(act==='prev'){ st.page=Math.max(0,st.page-1); renderTable(id); }
+      else if(act==='next'){ st.page++; renderTable(id); }
+      else if(act==='last'){ st.page=Math.max(0,Math.ceil(st.filtRows.length/st.pageSize)-1); renderTable(id); }
+      else if(act==='csv'){ exportTable(id,'csv'); }
+      else if(act==='xlsx'){ exportTable(id,'xlsx'); }
+      else if(act==='cols'){ openColumnChooser(id, btn); }
+    });
+  });
+
+  /* chips remove */
+  el.querySelectorAll('[data-tblrm]').forEach(b=>b.addEventListener('click',()=>{
+    delete st.filters[b.dataset.tblrm]; st.page=0; st.sig=''; renderTable(id);
+  }));
+}
+
+/* ---------- COLUMN CHOOSER ---------- */
+let colChooser=null;
+function openColumnChooser(id, anchor){
+  const spec=TABLE_SPECS[id], st=getTableState(id);
+  if(colChooser){ colChooser.remove(); colChooser=null; }
+  const box=document.createElement('div');
+  box.className='fpop open'; box.style.width='230px'; box.style.maxHeight='60vh';
+  box.innerHTML=`<div class="fpop-head"><b>${esc(tr('tbl.colVisibility'))}</b></div>
+    <div class="fpop-body">${spec.columns.map(c=>`<label class="fpop-check"><input type="checkbox" data-cc="${esc(c.key)}" ${st.hidden.has(c.key)?'':'checked'}> ${esc(c.label)}</label>`).join('')}</div>`;
+  document.body.appendChild(box);
+  const r=anchor.getBoundingClientRect();
+  box.style.top=(r.bottom+6)+'px';
+  box.style.left=Math.max(8,Math.min(window.innerWidth-240,r.left))+'px';
+  box.querySelectorAll('[data-cc]').forEach(cb=>cb.addEventListener('change',()=>{
+    if(cb.checked) st.hidden.delete(cb.dataset.cc); else st.hidden.add(cb.dataset.cc);
+    saveTablePrefs(); renderTable(id);
+  }));
+  colChooser=box;
+  setTimeout(()=>{
+    document.addEventListener('mousedown',function h(e){
+      if(!box.contains(e.target) && e.target!==anchor){ box.remove(); colChooser=null; document.removeEventListener('mousedown',h); }
+    });
+  },0);
+}
+
+/* ---------- FILTER POPUP ---------- */
+let fpopCtx=null;
+function openFilterPopup(tableId, colKey, anchorEl){
+  const spec=TABLE_SPECS[tableId], st=getTableState(tableId);
+  const col=spec.colMap[colKey]; if(!col) return;
+  fpopCtx={tableId,colKey};
+
+  const cur=st.filters[colKey]||{op:col.type==='num'?'gt':'contains',v1:'',v2:'',values:[],active:false};
+  const base=spec.getRows();
+
+  /* distinct values (cached per open) */
+  const seen=new Set(); const distinct=[];
+  for(let i=0;i<base.length && distinct.length<3000;i++){
+    const v=String(col.get?col.get(base[i]):base[i][colKey]);
+    if(v!=='' && !seen.has(v)){ seen.add(v); distinct.push(v); }
+  }
+  distinct.sort();
+
+  const ops = col.type==='num'
+    ? [['gt','op.gt'],['lt','op.lt'],['eq','op.numeq'],['between','op.between']]
+    : [['contains','op.contains'],['ncontains','op.ncontains'],['startswith','op.startswith'],['endswith','op.endswith'],['eq','op.eq']];
+
+  const body=$('#fpopBody');
+  body.innerHTML=`
+    <div class="fpop-row">
+      <select id="fpOp">${ops.map(([v,k])=>`<option value="${v}" ${cur.op===v?'selected':''}>${esc(tr(k))}</option>`).join('')}</select>
+    </div>
+    <div class="fpop-row">
+      <input id="fpV1" type="${col.type==='num'?'number':'text'}" placeholder="${esc(col.type==='num'?tr('tbl.value'):tr('filt.text'))}" value="${esc(cur.v1??'')}">
+      <input id="fpV2" type="number" placeholder="${esc(tr('tbl.max'))}" value="${esc(cur.v2??'')}" style="display:${cur.op==='between'?'block':'none'}">
+    </div>
+    <div class="fpop-sec">${esc(tr('tbl.activeFilters'))}</div>
+    <input id="fpSearch" type="search" placeholder="${esc(tr('tbl.searchValues'))}" style="width:100%;padding:5px 8px;font-size:12px">
+    <div class="fpop-actions" style="margin-top:6px">
+      <button id="fpAll">${esc(tr('tbl.selectAll'))}</button>
+      <button id="fpNone">${esc(tr('tbl.deselectAll'))}</button>
+    </div>
+    <div class="fpop-vals" id="fpVals">${
+      distinct.length
+        ? distinct.slice(0,500).map(v=>`<label><input type="checkbox" value="${esc(v)}" ${(cur.values||[]).includes(v)?'checked':''}><span>${esc(v)}</span></label>`).join('')
+        : `<div class="mini" style="padding:4px">${esc(tr('filt.novalues'))}</div>`
+    }</div>
+    <div class="mini" id="fpCount"></div>`;
+
+  $('#fpopTitle').textContent=col.label;
+
+  const opSel=body.querySelector('#fpOp'), v1=body.querySelector('#fpV1'), v2=body.querySelector('#fpV2');
+  const valsBox=body.querySelector('#fpVals');
+  const cntEl=body.querySelector('#fpCount');
+
+  opSel.addEventListener('change',()=>{ v2.style.display=opSel.value==='between'?'block':'none'; });
+  body.querySelector('#fpSearch').addEventListener('input',debounce(function(){
+    const q=this.value.toLowerCase();
+    valsBox.querySelectorAll('label').forEach(l=>{
+      const t=l.textContent.toLowerCase();
+      l.style.display = (!q || t.indexOf(q)!==-1) ? 'flex':'none';
+    });
+  },150));
+  body.querySelector('#fpAll').addEventListener('click',()=>{
+    valsBox.querySelectorAll('input').forEach(i=>{ if(i.closest('label').style.display!=='none') i.checked=true; });
+    updateCount();
+  });
+  body.querySelector('#fpNone').addEventListener('click',()=>{
+    valsBox.querySelectorAll('input').forEach(i=>i.checked=false);
+    updateCount();
+  });
+  valsBox.addEventListener('change',updateCount);
+
+  function currentValues(){ return [...valsBox.querySelectorAll('input:checked')].map(i=>i.value); }
+  function updateCount(){
+    const f=buildFilter();
+    const test=applyCompiled(base,[f]);
+    cntEl.textContent=fmt(test.length)+' / '+fmt(base.length);
+  }
+  function buildFilter(){
+    const f={op:opSel.value,v1:v1.value,v2:v2.value,values:currentValues()};
+    f.active=!!(f.v1!==''||(f.op==='between'&&f.v2!=='')||(f.values&&f.values.length));
+    const item={g:col.get||(r=>r[colKey]), type:col.type, op:f.op};
+    if(f.values&&f.values.length) item.set=new Set(f.values.map(String));
+    if(col.type==='num'){ item.v1=Number(f.v1); item.v2=Number(f.v2); }
+    else { item.v1=String(f.v1||'').toLowerCase(); }
+    f._compiled=item;
+    return item;
+  }
+  v1.addEventListener('input',debounce(updateCount,250));
+  v2.addEventListener('input',debounce(updateCount,250));
+  updateCount();
+
+  /* position */
+  const pop=$('#fpop');
+  pop.classList.add('open');
+  const r=anchorEl.getBoundingClientRect();
+  const pw=330, ph=Math.min(window.innerHeight*0.76, 560);
+  let left=r.left;
+  if(left+pw>window.innerWidth-8) left=window.innerWidth-pw-8;
+  let top=r.bottom+6;
+  if(top+ph>window.innerHeight-8) top=Math.max(8,window.innerHeight-ph-8);
+  pop.style.left=Math.max(8,left)+'px';
+  pop.style.top=top+'px';
+}
+
+function closeFilterPopup(){ $('#fpop').classList.remove('open'); fpopCtx=null; }
+
+/* ============================================================================
+   14. TABLE SPECS
+   ============================================================================ */
+const TABLE_SPECS={};
+
+function defineSpecs(){
+  /* ---- 1. Branch performance (dashboard) ---- */
+  TABLE_SPECS.branchPerf={
+    id:'branchPerf',
+    getRows:()=>ensureGlobal().branchAgg,
+    columns:[
+      {key:'branchCode',label:tr('th.branch'),type:'text',width:130,get:r=>r.branchCode,render:r=>`<b>${esc(r.branchCode)}</b>`},
+      {key:'qty',label:tr('th.salesQty'),type:'num',width:110,get:r=>r.qty,render:r=>fmt(r.qty)},
+      {key:'invoice',label:tr('th.sales'),type:'num',width:130,get:r=>r.invoice,render:r=>fmtCur(r.invoice)},
+      {key:'profit',label:tr('th.profit'),type:'num',width:130,get:r=>r.profit,render:r=>`<span class="${r.profit>=0?'pos':'neg'}">${fmtCur(r.profit)}</span>`},
+      {key:'stock',label:tr('th.stock'),type:'num',width:110,get:r=>r.stock,render:r=>fmt(r.stock)}
+    ]
+  };
+
+  /* ---- 2. Top products ---- */
+  TABLE_SPECS.topProducts={
+    id:'topProducts',
+    getRows:()=>ensureGlobal().itemAgg,
+    columns:[
+      {key:'itemCode',label:tr('th.code'),type:'text',width:120,get:r=>r.itemCode},
+      {key:'itemName',label:tr('th.itemName'),type:'text',width:230,get:r=>r.itemName},
+      {key:'subgroupName',label:tr('th.subgroup'),type:'text',width:140,get:r=>r.subgroupName},
+      {key:'qty',label:tr('th.qty'),type:'num',width:100,get:r=>r.qty,render:r=>fmt(r.qty)},
+      {key:'invoice',label:tr('th.sales'),type:'num',width:130,get:r=>r.invoice,render:r=>fmtCur(r.invoice)},
+      {key:'profit',label:tr('th.profit'),type:'num',width:130,get:r=>r.profit,render:r=>`<span class="${r.profit>=0?'pos':'neg'}">${fmtCur(r.profit)}</span>`},
+      {key:'margin',label:tr('th.margin'),type:'num',width:100,dec:2,get:r=>r.margin,render:r=>fmt(r.margin,2)+'%'},
+      {key:'stock',label:tr('th.stock'),type:'num',width:110,get:r=>r.stock,render:r=>fmt(r.stock)}
+    ]
+  };
+
+  /* ---- 3. Subgroup performance ---- */
+  TABLE_SPECS.subgroupPerf={
+    id:'subgroupPerf',
+    getRows:()=>ensureGlobal().sgAgg,
+    columns:[
+      {key:'subgroupName',label:tr('th.subgroup'),type:'text',width:180,get:r=>r.subgroupName},
+      {key:'qty',label:tr('th.qty'),type:'num',width:100,get:r=>r.qty,render:r=>fmt(r.qty)},
+      {key:'invoice',label:tr('th.sales'),type:'num',width:130,get:r=>r.invoice,render:r=>fmtCur(r.invoice)},
+      {key:'profit',label:tr('th.profit'),type:'num',width:130,get:r=>r.profit,render:r=>fmtCur(r.profit)},
+      {key:'margin',label:tr('th.margin'),type:'num',width:100,dec:2,get:r=>r.margin,render:r=>fmt(r.margin,2)+'%'}
+    ]
+  };
+
+  /* ---- 4. Inventory sets (oos / low / over / fast) ---- */
+  const invCols=[
+    {key:'itemCode',label:tr('th.code'),type:'text',width:120,get:r=>r.itemCode},
+    {key:'itemName',label:tr('th.item'),type:'text',width:220,get:r=>r.itemName},
+    {key:'branchCode',label:tr('th.branch'),type:'text',width:120,get:r=>r.branchCode},
+    {key:'stock',label:tr('th.stock'),type:'num',width:100,get:r=>r.stock,render:r=>fmt(r.stock)},
+    {key:'qty',label:tr('th.qty'),type:'num',width:100,get:r=>r.qty,render:r=>fmt(r.qty)},
+    {key:'ads',label:tr('th.avgDaily'),type:'num',width:110,dec:2,get:r=>r.ads,render:r=>fmt(r.ads,2)}
+  ];
+  function invRows(kind){
+    const rows=memo.rows, s=state.settings, p=state.periodDays||30;
+    const out=[];
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i]; const ads=r.qty/p;
+      if(kind==='oos' && r.stock<=0) out.push(Object.assign({},r,{ads}));
+      else if(kind==='low' && r.stock>0 && r.stock<=s.lowStock) out.push(Object.assign({},r,{ads}));
+      else if(kind==='over' && r.stock>0 && ((ads>0 && r.stock>ads*s.overstockDays)||(ads<=0&&r.stock>=s.overstockQty))) out.push(Object.assign({},r,{ads}));
+      else if(kind==='fast' && ads>=s.fastMoving) out.push(Object.assign({},r,{ads}));
+    }
+    return out;
+  }
+  ['oos','low','over','fast'].forEach(k=>{
+    TABLE_SPECS[k]={id:k,getRows:()=>invRows(k),columns:invCols.slice()};
+  });
+
+  /* ---- 5. Branch comparison ---- */
+  TABLE_SPECS.branchCompare={
+    id:'branchCompare',
+    getRows:()=>ensureGlobal().branchAgg,
+    columns:[
+      {key:'branchCode',label:tr('th.branch'),type:'text',width:130,get:r=>r.branchCode,render:r=>`<b>${esc(r.branchCode)}</b>`},
+      {key:'qty',label:tr('th.salesQty'),type:'num',width:110,get:r=>r.qty,render:r=>fmt(r.qty)},
+      {key:'invoice',label:tr('th.sales'),type:'num',width:130,get:r=>r.invoice,render:r=>fmtCur(r.invoice)},
+      {key:'cost',label:tr('th.cost'),type:'num',width:130,get:r=>r.cost,render:r=>fmtCur(r.cost)},
+      {key:'profit',label:tr('th.profit'),type:'num',width:130,get:r=>r.profit,render:r=>`<span class="${r.profit>=0?'pos':'neg'}">${fmtCur(r.profit)}</span>`},
+      {key:'margin',label:tr('th.margin'),type:'num',width:100,dec:2,get:r=>r.margin,render:r=>fmt(r.margin,2)+'%'},
+      {key:'stock',label:tr('th.stock'),type:'num',width:110,get:r=>r.stock,render:r=>fmt(r.stock)},
+      {key:'itemCount',label:tr('th.items'),type:'num',width:90,get:r=>r.itemCount,render:r=>fmt(r.itemCount)},
+      {key:'oos',label:tr('th.oos'),type:'num',width:90,get:r=>r.oos,render:r=>`<span class="neg">${fmt(r.oos)}</span>`},
+      {key:'low',label:tr('th.low'),type:'num',width:90,get:r=>r.low,render:r=>`<span class="warnc">${fmt(r.low)}</span>`}
+    ]
+  };
+
+  /* ---- 6. Transfer table ---- */
+  TABLE_SPECS.transferTable={
+    id:'transferTable',
+    getRows:()=>computeTransferRecs(),
+    columns:[
+      {key:'itemCode',label:tr('th.code'),type:'text',width:110,get:r=>r.itemCode},
+      {key:'itemName',label:tr('th.itemName'),type:'text',width:200,get:r=>r.itemName},
+      {key:'subgroupName',label:tr('th.subgroup'),type:'text',width:130,get:r=>r.subgroupName},
+      {key:'destBranch',label:tr('th.dest'),type:'text',width:120,get:r=>r.destBranch,render:r=>`<b>${esc(r.destBranch)}</b>`},
+      {key:'destStock',label:tr('th.destStock'),type:'num',width:100,get:r=>r.destStock,render:r=>`<span class="neg">${fmt(r.destStock)}</span>`},
+      {key:'destSalesQty',label:tr('th.destSales'),type:'num',width:120,get:r=>r.destSalesQty,render:r=>fmt(r.destSalesQty)},
+      {key:'period',label:tr('th.period'),type:'num',width:80,get:r=>r.period,render:r=>r.period+'d'},
+      {key:'avgDaily',label:tr('th.avgDaily'),type:'num',width:100,dec:2,get:r=>r.avgDaily,render:r=>fmt(r.avgDaily,2)},
+      {key:'transferDays',label:tr('th.coverage'),type:'num',width:90,get:r=>r.transferDays,render:r=>r.transferDays+'d'},
+      {key:'requiredQty',label:tr('th.required'),type:'num',width:110,dec:1,get:r=>r.requiredQty,render:r=>fmt(r.requiredQty,1)},
+      {key:'primarySource',label:tr('th.source'),type:'text',width:120,get:r=>r.primarySource},
+      {key:'primarySourceStock',label:tr('th.sourceStock'),type:'num',width:110,get:r=>r.primarySourceStock,render:r=>fmt(r.primarySourceStock)},
+      {key:'sourceSafety',label:tr('th.safety'),type:'num',width:100,get:r=>r.sourceSafety,render:r=>fmt(r.sourceSafety)},
+      {key:'transferableStock',label:tr('th.transferable'),type:'num',width:110,get:r=>r.transferableStock,render:r=>fmt(r.transferableStock)},
+      {key:'finalQty',label:tr('th.finalQty'),type:'num',width:100,get:r=>r.finalQty,render:r=>`<input type="number" min="1" value="${r.finalQty}" data-edit="${esc(r.key)}" style="width:64px;padding:2px 4px;font-size:11px">`},
+      {key:'priority',label:tr('th.priority'),type:'text',width:100,get:r=>r.priority,
+        render:r=>`<span class="tag ${r.priority==='High'?'high':r.priority==='Medium'?'med':'low'}">${esc(prLabel(r.priority))}</span>`},
+      {key:'status',label:tr('th.status'),type:'text',width:110,get:r=>r.status,
+        render:r=>`<span class="tag ${r.status==='Approved'?'low':r.status==='Rejected'?'high':'info'}">${esc(stLabel(r.status))}</span>`},
+      {key:'actions',label:tr('th.actions'),type:'text',width:90,get:()=>'',sortable:false,
+        render:r=>`<button class="btn sm glow" data-approve="${esc(r.key)}" title="${esc(tr('btn.approve'))}">✓</button>
+                   <button class="btn sm danger glow" data-reject="${esc(r.key)}" title="${esc(tr('btn.reject'))}">✕</button>`}
+    ]
+  };
+
+  /* ---- 7. Branch report ---- */
+  TABLE_SPECS.branchReport={
+    id:'branchReport',
+    getRows:()=>computeTransferRecs(),
+    columns:[
+      {key:'destBranch',label:tr('th.dest'),type:'text',width:120,get:r=>r.destBranch,render:r=>`<b>${esc(r.destBranch)}</b>`},
+      {key:'itemCode',label:tr('th.code'),type:'text',width:110,get:r=>r.itemCode},
+      {key:'itemName',label:tr('th.itemName'),type:'text',width:200,get:r=>r.itemName},
+      {key:'subgroupName',label:tr('th.subgroup'),type:'text',width:130,get:r=>r.subgroupName},
+      {key:'destStock',label:tr('th.destStock'),type:'num',width:100,get:r=>r.destStock,render:r=>`<span class="neg">${fmt(r.destStock)}</span>`},
+      {key:'demand',label:tr('th.demand'),type:'num',width:130,get:r=>r.destSalesQty,render:r=>fmt(r.destSalesQty)+' / '+r.period+'d'},
+      {key:'rec7',label:tr('th.rec7'),type:'num',width:100,get:r=>r.avgDaily*7,render:r=>fmt(Math.round(r.avgDaily*7))},
+      {key:'rec14',label:tr('th.rec14'),type:'num',width:100,get:r=>r.avgDaily*14,render:r=>fmt(Math.round(r.avgDaily*14))},
+      {key:'rec30',label:tr('th.rec30'),type:'num',width:100,get:r=>r.avgDaily*30,render:r=>fmt(Math.round(r.avgDaily*30))},
+      {key:'sources',label:tr('th.sources'),type:'text',width:180,get:r=>r.sources.map(s=>s.source).join(', '),
+        render:r=>esc(r.sources.map(s=>s.source+' ('+fmt(s.transferable)+')').join(', '))},
+      {key:'priority',label:tr('th.priority'),type:'text',width:100,get:r=>r.priority,
+        render:r=>`<span class="tag ${r.priority==='High'?'high':r.priority==='Medium'?'med':'low'}">${esc(prLabel(r.priority))}</span>`},
+      {key:'status',label:tr('th.status'),type:'text',width:110,get:r=>r.status,
+        render:r=>`<span class="tag ${r.status==='Approved'?'low':r.status==='Rejected'?'high':'info'}">${esc(stLabel(r.status))}</span>`}
+    ]
+  };
+
+  /* ---- 8. Raw data table ---- */
+  TABLE_SPECS.dataTable={
+    id:'dataTable',
+    getRows:()=>ensureGlobal().rows,
+    columns:COLUMNS.map(c=>({
+      key:c.key,label:colLabel(c),type:c.type,
+      width: c.key==='itemName'?220: c.type==='num'?120:130,
+      dec: c.key==='margin'?2:0,
+      get:r=>r[c.key],
+      render: c.type==='num' ? (r=>fmt(r[c.key], c.key==='margin'?2:0)) : (r=>esc(r[c.key]))
+    }))
+  };
+
+  /* colMap + searchAccessors for each spec */
+  Object.keys(TABLE_SPECS).forEach(id=>{
+    const spec=TABLE_SPECS[id];
+    spec.colMap={};
+    spec.columns.forEach(c=>{ spec.colMap[c.key]=c; });
+    spec.searchAccessors=[
+      r=>r.itemCode, r=>r.itemName, r=>r.branchCode, r=>r.subgroupName, r=>r.destBranch
+    ];
+  });
+}
+
+/* ============================================================================
+   15. TABLE EXPORT
+   ============================================================================ */
+function exportTable(id, format){
+  const spec=TABLE_SPECS[id], st=getTableState(id);
+  if(!st.filtRows){ computeTableRows(spec, st, memo.key||''); }
+  const rows=st.filtRows||[];
+  if(!rows.length){ alert(tr('msg.nothingExport')); return; }
+  const cols=visibleColumns(spec,st);
+  const data=rows.map(r=>{
+    const o={};
+    cols.forEach(c=>{ o[c.label]= c.get? c.get(r) : r[c.key]; });
+    return o;
+  });
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,id.slice(0,28)||'Sheet1');
+  const fname=`${id}_${new Date().toISOString().slice(0,10)}.${format==='csv'?'csv':'xlsx'}`;
+  XLSX.writeFile(wb,fname,{bookType: format==='csv'?'csv':'xlsx'});
+}
+
+/* ============================================================================
+   16. KPI + CHARTS
+   ============================================================================ */
+const KPI_DEFS=[
+  {id:'k_qty',   label:'kpi.qty',    cls:'',   get:(o,c)=>fmt(o.qty)},
+  {id:'k_amt',   label:'kpi.invoice',cls:'g2', get:(o,c)=>fmtCur(o.invoice)},
+  {id:'k_cost',  label:'kpi.cost',   cls:'g3', get:(o,c)=>fmtCur(o.cost)},
+  {id:'k_profit',label:'kpi.profit', cls:'g2', get:(o,c)=>fmtCur(o.profit)},
+  {id:'k_margin',label:'kpi.margin', cls:'g5', get:(o,c)=>fmt(o.margin,2)+'%'},
+  {id:'k_stock', label:'kpi.stock',  cls:'',   get:(o,c)=>fmt(o.stock)},
+  {id:'k_items', label:'kpi.items',  cls:'g5', get:(o,c)=>fmt(o.itemCount)},
+  {id:'k_br',    label:'kpi.branches',cls:'g2',get:(o,c)=>fmt(o.branchCount)},
+  {id:'k_oos',   label:'kpi.oos',    cls:'g4', get:(o,c)=>fmt(c.oos)},
+  {id:'k_low',   label:'kpi.low',    cls:'g3', get:(o,c)=>fmt(c.low)},
+  {id:'k_over',  label:'kpi.over',   cls:'g5', get:(o,c)=>fmt(c.over)},
+  {id:'k_fast',  label:'kpi.fast',   cls:'g2', get:(o,c)=>fmt(c.fast)}
+];
+function renderKPIs(){
+  const m=ensureGlobal();
+  const grid=$('#kpiGrid');
+  if(grid.children.length!==KPI_DEFS.length){
+    grid.innerHTML=KPI_DEFS.map(d=>`
+      <div class="kpi-card glow ${d.cls}" data-wid="${d.id}">
+        <div class="kpi-label"></div><div class="kpi-value" data-val>—</div>
+        <div class="kpi-sub" data-sub></div><div class="rz-handle"></div>
+      </div>`).join('');
+    grid.querySelectorAll('.kpi-card').forEach(makeResizable);
+    applyLayout();
+  }
+  KPI_DEFS.forEach((d,i)=>{
+    const el=grid.children[i]; if(!el) return;
+    el.querySelector('.kpi-label').textContent=tr(d.label);
+    el.querySelector('[data-val]').textContent=d.get(m.agg,m.classify);
+    el.querySelector('[data-sub]').textContent=trf('kpi.sub',{rows:fmt(m.rows.length),days:state.periodDays});
+  });
+}
+
+const charts={};
+function chartColors(){
+  const cs=getComputedStyle(document.body);
+  return {text:cs.getPropertyValue('--text').trim(),muted:cs.getPropertyValue('--muted').trim(),grid:cs.getPropertyValue('--border').trim()};
+}
+function baseOpts(){
+  const c=chartColors();
+  return {
+    responsive:true, maintainAspectRatio:false, animation:{duration:250},
+    plugins:{
+      legend:{labels:{color:c.muted,boxWidth:12,font:{size:11}}},
+      tooltip:{backgroundColor:'rgba(15,22,34,.95)',borderColor:c.grid,borderWidth:1,titleColor:c.text,bodyColor:c.muted,padding:9,cornerRadius:8}
+    },
+    scales:{
+      x:{ticks:{color:c.muted,font:{size:10}},grid:{color:c.grid,drawBorder:false}},
+      y:{ticks:{color:c.muted,font:{size:10}},grid:{color:c.grid,drawBorder:false}}
+    }
+  };
+}
+function drawChart(id,cfg){
+  const el=document.getElementById(id); if(!el) return;
+  if(charts[id]){ try{ charts[id].destroy(); }catch(e){} delete charts[id]; }
+  charts[id]=new Chart(el.getContext('2d'),cfg);
+}
+function refreshChartsTheme(){
+  Object.keys(charts).forEach(id=>{ try{ charts[id].destroy(); }catch(e){} delete charts[id]; });
+  renderAll();
+}
+
+function renderDashCharts(){
+  const m=ensureGlobal();
+  const c=chartColors();
+
+  const br=m.branchAgg.slice(0,15);
+  drawChart('chartBranchSales',{
+    type:'bar',
+    data:{labels:br.map(x=>x.branchCode),
+      datasets:[{label:tr('ch.netSales'),data:br.map(x=>x.invoice),backgroundColor:'rgba(79,140,255,.65)',borderColor:'#4f8cff',borderWidth:1,borderRadius:6}]},
+    options:baseOpts()
+  });
+
+  const items=m.itemAgg.slice(0,10);
+  const o2=baseOpts(); o2.indexAxis='y';
+  drawChart('chartTopItems',{
+    type:'bar',
+    data:{labels:items.map(x=>x.itemName.slice(0,26)),
+      datasets:[{label:tr('ch.qty'),data:items.map(x=>x.qty),backgroundColor:'rgba(34,211,166,.65)',borderColor:'#22d3a6',borderWidth:1,borderRadius:6}]},
+    options:o2
+  });
+
+  const sg=m.sgAgg.slice(0,8);
+  const palette=['#4f8cff','#22d3a6','#ffb020','#ff5c73','#a78bfa','#38bdf8','#f472b6','#84cc16'];
+  drawChart('chartSubgroup',{
+    type:'doughnut',
+    data:{labels:sg.map(x=>x.subgroupName),
+      datasets:[{data:sg.map(x=>x.invoice),backgroundColor:palette,borderWidth:2,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',animation:{duration:250},
+      plugins:{legend:{position:'bottom',labels:{color:c.muted,boxWidth:10,font:{size:10}}},
+        tooltip:{backgroundColor:'rgba(15,22,34,.95)'}}}
+  });
+
+  const cl=m.classify;
+  drawChart('chartInvStatus',{
+    type:'doughnut',
+    data:{labels:[tr('ch.oos'),tr('ch.low'),tr('ch.over'),tr('ch.fast'),tr('ch.normal')],
+      datasets:[{data:[cl.oos,cl.low,cl.over,cl.fast,Math.max(0,m.rows.length-cl.oos-cl.low-cl.over-cl.fast)],
+        backgroundColor:['#ff5c73','#ffb020','#a78bfa','#22d3a6','#2c3d56'],borderWidth:2,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',animation:{duration:250},
+      plugins:{legend:{position:'bottom',labels:{color:c.muted,boxWidth:10,font:{size:10}}},
+        tooltip:{backgroundColor:'rgba(15,22,34,.95)'}}}
+  });
+}
+
+function renderProfitChart(){
+  const m=ensureGlobal();
+  const arr=m.sgAgg.slice(0,10);
+  drawChart('chartProfitSub',{
+    type:'bar',
+    data:{labels:arr.map(x=>x.subgroupName),
+      datasets:[
+        {label:tr('ch.profit'),data:arr.map(x=>x.profit),backgroundColor:'rgba(34,211,166,.7)',borderRadius:6},
+        {label:tr('ch.invoice'),data:arr.map(x=>x.invoice),backgroundColor:'rgba(79,140,255,.5)',borderRadius:6}
+      ]},
+    options:baseOpts()
+  });
+}
+function renderBranchChart(){
+  const m=ensureGlobal();
+  const br=m.branchAgg.slice(0,15);
+  drawChart('chartBranchCompare',{
+    type:'bar',
+    data:{labels:br.map(x=>x.branchCode),
+      datasets:[
+        {label:tr('ch.netSales'),data:br.map(x=>x.invoice),backgroundColor:'rgba(79,140,255,.7)',borderRadius:5},
+        {label:tr('ch.profit'),data:br.map(x=>x.profit),backgroundColor:'rgba(34,211,166,.7)',borderRadius:5},
+        {label:tr('ch.stock'),data:br.map(x=>x.stock),backgroundColor:'rgba(255,176,32,.55)',borderRadius:5}
+      ]},
+    options:baseOpts()
+  });
+}
+
+/* ============================================================================
+   17. HISTORY / PERF
+   ============================================================================ */
+function renderHistory(){
+  const list=$('#historyList'); if(!list) return;
+  if(!state.datasets.length){
+    list.innerHTML=`<div class="empty"><div class="big">◷</div><h3>${esc(tr('hist.empty.title'))}</h3><p>${esc(tr('hist.empty.desc'))}</p></div>`;
+    return;
+  }
+  list.innerHTML=state.datasets.map(d=>`
+    <div class="hist-item glow">
+      <div class="hname">${esc(d.fileName)}</div>
+      <div class="hist-meta">
+        <span>${esc(tr('hist.uploaded'))}: <b>${new Date(d.uploadDate).toLocaleString()}</b></span>
+        <span>${esc(tr('hist.period'))}: <b>${esc(trf('hist.days',{n:d.periodDays}))}</b></span>
+        <span>${esc(tr('hist.type'))}: <b>${esc(dataTypeLabel(d.dataType))}</b></span>
+        <span>${esc(tr('hist.branches'))}: <b>${d.branchCount}</b></span>
+        <span>${esc(tr('hist.products'))}: <b>${d.productCount}</b></span>
+        <span>${esc(tr('hist.sales'))}: <b>${fmtCur(d.totalSales)}</b></span>
+        <span>${esc(tr('hist.profit'))}: <b>${fmtCur(d.totalProfit)}</b></span>
+        <span>${esc(tr('hist.status'))}: <b class="${d.status==='OK'?'pos':'neg'}">${esc(d.status==='OK'?tr('hist.ok'):d.status)}</b></span>
+      </div>
+      <div class="flex">
+        <button class="btn sm glow" data-load="${d.id}">${esc(tr('btn.load'))}</button>
+        <button class="btn sm danger glow" data-del="${d.id}">${esc(tr('btn.delete'))}</button>
+      </div>
+    </div>`).join('');
+
+  list.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',async()=>{
+    state.activeId=b.dataset.load;
+    const d=activeDataset();
+    if(d){ state.periodDays=d.periodDays; state.dataType=d.dataType; }
+    state.mode='all'; state.branch=''; state.branches=[];
+    $('#modeSelect').value='all';
+    await refreshDatasets(); renderAll();
+  }));
+  list.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',async()=>{
+    if(!confirm(tr('msg.confirmDelete'))) return;
+    await dbDelete(b.dataset.del);
+    if(state.activeId===b.dataset.del) state.activeId=null;
+    await refreshDatasets(); renderAll();
+  }));
+}
+
+function renderPerf(){
+  const el=$('#perfGrid'); if(!el) return;
+  const d=activeDataset();
+  const size = d? JSON.stringify(d.rows).length : 0;
+  const cells=[
+    [tr('perf.records'), fmt(d?d.rows.length:0)],
+    [tr('perf.memory'), fmt(memo.rows.length)],
+    [tr('perf.processing'), memo.genTime.toFixed(1)+' ms'],
+    [tr('perf.filtered'), fmt(memo.rows.length)],
+    [tr('perf.render'), state.perf.lastRender.toFixed(1)+' ms'],
+    [tr('perf.charts'), Object.keys(charts).length],
+    [tr('perf.size'), bytes(size)],
+    [tr('perf.cache'), memo.key? tr('perf.cached'):tr('perf.fresh')],
+    [tr('perf.tables'), state.perf.tablesRendered]
+  ];
+  el.innerHTML=cells.map(([l,v])=>`<div class="perf-cell"><div class="pl">${esc(l)}</div><div class="pv">${esc(v)}</div></div>`).join('');
+}
+
+/* ============================================================================
+   18. BRANCH DROPDOWN / SUBGROUPS
+   ============================================================================ */
+function renderBranchDropdown(){
+  const branches=[...new Set(allRows().map(r=>r.branchCode))].filter(Boolean).sort();
+  const panel=$('#branchDDPanel');
+  panel.innerHTML=`
+    <div class="dd-actions">
+      <button class="btn sm glow" id="ddAll">${esc(tr('dd.selectAll'))}</button>
+      <button class="btn sm glow" id="ddNone">${esc(tr('dd.deselectAll'))}</button>
+    </div>
+    ${branches.length
+      ? branches.map(b=>`<label class="dd-item"><input type="checkbox" value="${esc(b)}" ${state.branches.includes(b)?'checked':''}><span>${esc(b)}</span></label>`).join('')
+      : `<div class="mini">${esc(tr('dd.noBranches'))}</div>`}`;
+
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      state.branches=[...panel.querySelectorAll('input:checked')].map(i=>i.value);
+      updateBranchLabel(); invalidateGlobal(); renderAll();
+    });
+  });
+  const all=panel.querySelector('#ddAll'), none=panel.querySelector('#ddNone');
+  if(all) all.addEventListener('click',()=>{
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=true);
+    state.branches=[...panel.querySelectorAll('input:checked')].map(i=>i.value);
+    updateBranchLabel(); invalidateGlobal(); renderAll();
+  });
+  if(none) none.addEventListener('click',()=>{
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);
+    state.branches=[]; updateBranchLabel(); invalidateGlobal(); renderAll();
+  });
+  updateBranchLabel();
+}
+function updateBranchLabel(){
+  const lbl=$('#branchDDLabel');
+  if(state.mode==='all') lbl.textContent=tr('dd.allBranches');
+  else if(state.mode==='single') lbl.textContent=state.branch||tr('dd.selectBranch');
+  else lbl.textContent = state.branches.length? trf('dd.nBranches',{n:state.branches.length}) : tr('dd.selectBranches');
+}
+function renderSubgroupSelect(){
+  const sel=$('#subgroupSelect');
+  const sgs=[...new Set(allRows().map(r=>r.subgroupName))].filter(Boolean).sort();
+  sel.innerHTML=`<option value="">${esc(tr('opt.allSubgroups'))}</option>`+
+    sgs.map(s=>`<option value="${esc(s)}" ${s===state.quick.subgroup?'selected':''}>${esc(s)}</option>`).join('');
+}
+
+/* ============================================================================
+   19. LAYOUT: RESIZE / DRAG
+   ============================================================================ */
+function makeResizable(el){
+  const handle=el.querySelector('.rz-handle');
+  if(!handle || handle.dataset.bound) return;
+  handle.dataset.bound='1';
+  handle.addEventListener('mousedown',e=>{
+    e.preventDefault(); e.stopPropagation();
+    const start={x:e.clientX,y:e.clientY};
+    const rect=el.getBoundingClientRect();
+    const isKpi=el.classList.contains('kpi-card');
+    const grid=el.parentElement;
+    const colW=grid.getBoundingClientRect().width/12;
+    document.body.classList.add('resizing');
+    function move(ev){
+      const dx=ev.clientX-start.x, dy=ev.clientY-start.y;
+      if(isKpi){
+        el.style.width=Math.max(160,rect.width+dx)+'px';
+        el.style.height=Math.max(84,rect.height+dy)+'px';
+      }else{
+        const span=Math.min(12,Math.max(3,Math.round((rect.width+dx)/colW)));
+        el.style.gridColumn='span '+span;
+        el.style.height=Math.max(160,rect.height+dy)+'px';
+      }
+      el.querySelectorAll('canvas').forEach(c=>{ const ch=Chart.getChart(c); if(ch) ch.resize(); });
+    }
+    function up(){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      document.body.classList.remove('resizing');
+      saveLayoutFromDOM();
+    }
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  });
+}
+function makeDraggable(el){
+  const head=el.querySelector('.widget-head');
+  if(!head||head.dataset.bound) return;
+  head.dataset.bound='1';
+  head.addEventListener('mousedown',e=>{
+    if(e.target.closest('button')) return;
+    e.preventDefault();
+    const grid=el.parentElement;
+    [...grid.children].forEach((it,i)=>{ if(!it.style.order) it.style.order=i; });
+    el.style.opacity='.55'; el.style.pointerEvents='none';
+    function move(ev){
+      const target=document.elementFromPoint(ev.clientX,ev.clientY);
+      const w=target&&target.closest('.widget');
+      if(w && w!==el && w.parentElement===grid){
+        const o1=Number(el.style.order)||0, o2=Number(w.style.order)||0;
+        if(o1!==o2){ el.style.order=o2; w.style.order=o1; }
+      }
+    }
+    function up(){
+      document.removeEventListener('mousemove',move);
+      document.removeEventListener('mouseup',up);
+      el.style.opacity=''; el.style.pointerEvents='';
+      saveLayoutFromDOM();
+    }
+    document.addEventListener('mousemove',move);
+    document.addEventListener('mouseup',up);
+  });
+}
+function saveLayoutFromDOM(){
+  const layout={};
+  document.querySelectorAll('[data-wid]').forEach(el=>{
+    const id=el.dataset.wid, o={};
+    if(el.classList.contains('kpi-card')){
+      o.w=parseInt(el.style.width)||Math.round(el.getBoundingClientRect().width);
+      o.h=parseInt(el.style.height)||Math.round(el.getBoundingClientRect().height);
+    }else{
+      o.span=parseInt(String(el.style.gridColumn||'').replace('span ',''))||parseInt(el.dataset.span)||6;
+      o.h=parseInt(el.style.height)||Math.round(el.getBoundingClientRect().height);
+      o.order=parseInt(el.style.order)||0;
+    }
+    layout[id]=o;
+  });
+  state.layout=layout;
+  localStorage.setItem(LS_LAYOUT,JSON.stringify(layout));
+}
+function applyLayout(){
+  document.querySelectorAll('[data-wid]').forEach(el=>{
+    const L=state.layout[el.dataset.wid]; if(!L) return;
+    if(el.classList.contains('kpi-card')){
+      if(L.w) el.style.width=L.w+'px';
+      if(L.h) el.style.height=L.h+'px';
+    }else{
+      if(L.span) el.style.gridColumn='span '+L.span;
+      if(L.h) el.style.height=L.h+'px';
+      if(L.order) el.style.order=L.order;
+    }
+  });
+}
+function resetLayout(){
+  localStorage.removeItem(LS_LAYOUT); state.layout={};
+  document.querySelectorAll('[data-wid]').forEach(el=>{ el.style.width='';el.style.height='';el.style.gridColumn='';el.style.order=''; });
+  document.querySelectorAll('.widget').forEach(w=>{
+    w.style.height=(w.dataset.h||320)+'px';
+    w.style.gridColumn='span '+(w.dataset.span||6);
+    w.classList.remove('minimized','fullscreen');
+  });
+  document.querySelectorAll('canvas').forEach(c=>{ const ch=Chart.getChart(c); if(ch) ch.resize(); });
+}
+function initWidgetTools(){
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-act]'); if(!btn) return;
+    const widget=btn.closest('.widget'); if(!widget) return;
+    if(btn.dataset.act==='min'){
+      widget.classList.toggle('minimized');
+      setTimeout(()=>widget.querySelectorAll('canvas').forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.resize();}),280);
+    }else if(btn.dataset.act==='max'){
+      widget.classList.toggle('fullscreen');
+      setTimeout(()=>widget.querySelectorAll('canvas').forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.resize();}),280);
+    }
+  });
+}
+
+/* ============================================================================
+   20. UPLOAD
+   ============================================================================ */
+let pendingFile=null, selectedDays=30;
+function openUpload(){
+  pendingFile=null; selectedDays=30;
+  $('#fileInput').value=''; $('#customDays').value=''; $('#customDays').style.display='none';
+  $$('#daysOpts .opt').forEach(b=>b.classList.toggle('sel',b.dataset.days==='30'));
+  $('#modalBackdrop').classList.add('open'); $('#uploadModal').classList.add('open');
+}
+function closeUpload(){ $('#modalBackdrop').classList.remove('open'); $('#uploadModal').classList.remove('open'); }
+
+async function handleUpload(){
+  if(!pendingFile){ alert(tr('msg.selectFile')); return; }
+  let days=selectedDays;
+  if(days==='custom'){
+    days=Number($('#customDays').value);
+    if(!days||days<1){ alert(tr('msg.invalidDays')); return; }
+  }
+  const dataType=$('#dataTypeSelect').value;
+  const btn=$('#confirmUpload');
+  const label=tr('up.process');
+  btn.disabled=true; btn.textContent=tr('up.processing');
+
+  try{
+    const buf=await pendingFile.arrayBuffer();
+    let rows=[], viaWorker=false;
+    try{
+      const aoa=await workerParse(buf.slice(0));
+      rows=aoaToRows(aoa);
+      viaWorker=true;
+    }catch(err){
+      rows=parseOnMainThread(buf);
+    }
+    if(!rows.length){ alert(tr('msg.noRows')); return; }
+
+    const branches=new Set(), products=new Set();
+    let totalSales=0,totalProfit=0;
+    for(let i=0;i<rows.length;i++){
+      const r=rows[i];
+      branches.add(r.branchCode); products.add(r.itemCode);
+      totalSales+=r.invoice; totalProfit+=r.profit;
+    }
+
+    const ds={
+      id:'ds_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+      fileName:pendingFile.name, uploadDate:Date.now(),
+      periodDays:days, dataType,
+      branchCount:branches.size, productCount:products.size,
+      totalSales, totalProfit, status:'OK', rows
+    };
+    await dbPut(ds);
+    state.activeId=ds.id; state.periodDays=days; state.dataType=dataType;
+    state.mode='all'; state.branch=''; state.branches=[];
+    state.filters={}; state.quick={subgroup:'',search:''};
+    $('#modeSelect').value='all';
+    Object.keys(tableState).forEach(k=>{ tableState[k].sig=''; });
+    await refreshDatasets();
+    closeUpload(); renderAll();
+    showToast(trf('msg.loaded',{rows:fmt(rows.length),days})+' • '+(viaWorker?tr('msg.parsedWorker'):tr('msg.parsedMain')));
+  }catch(err){
+    console.error(err);
+    alert(trf('msg.failed',{e:err.message}));
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
+}
+
+/* ============================================================================
+   21. EXPORT / PRINT
+   ============================================================================ */
+function exportCurrentView(){ exportTable('dataTable','xlsx'); }
+function printTransfers(){
+  const rows=computeTransferRecs();
+  if(!rows.length){ alert(tr('msg.nothingPrint')); return; }
+  const cols=['itemCode','itemName','destBranch','destStock','destSalesQty','avgDaily','transferDays','finalQty','primarySource','priority'];
+  const heads=['Code','Item','Dest','DestStock','DestSales','Avg/Day','Days','FinalQty','Source','Priority'];
+  const w=window.open('','_blank');
+  w.document.write(`<html dir="${state.lang==='ar'?'rtl':'ltr'}"><head><title>${esc(tr('w.transfers'))}</title><style>
+    body{font-family:Arial;padding:18px;color:#111;font-size:11px}
+    h2{margin:0 0 4px}.sub{color:#666;font-size:11px;margin-bottom:14px}
+    table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px;text-align:left}
+    th{background:#f2f5fa}</style></head><body>
+    <h2>${esc(tr('w.transfers'))}</h2>
+    <div class="sub">${esc(new Date().toLocaleString())} • ${esc(trf('tr.meta',{count:fmt(rows.length),days:state.transferDays,period:state.periodDays}))}</div>
+    <table><thead><tr>${heads.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>
+    ${rows.slice(0,2000).map(r=>`<tr>${cols.map(k=>`<td>${esc(r[k])}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),400);
+}
+
+/* ============================================================================
+   22. TOAST / DRAWER
+   ============================================================================ */
+function showToast(msg){
+  const d=document.createElement('div');
+  d.textContent=msg;
+  d.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);'+
+    'background:var(--panel3);border:1px solid rgba(var(--glow),.5);color:var(--text);'+
+    'padding:11px 20px;border-radius:11px;font-size:13px;z-index:99999;box-shadow:var(--shadow);';
+  document.body.appendChild(d);
+  setTimeout(()=>{ d.style.opacity='0'; d.style.transition='opacity .4s'; },2200);
+  setTimeout(()=>d.remove(),2700);
+}
+function openDrawer(){ $('#drawerBackdrop').classList.add('open'); $('#filterDrawer').classList.add('open'); }
+function closeDrawer(){ $('#drawerBackdrop').classList.remove('open'); $('#filterDrawer').classList.remove('open'); }
+
+/* ============================================================================
+   23. RENDER ORCHESTRATION
+   ============================================================================ */
+function renderView(v){
+  ensureGlobal();
+  if(v==='dashboard'){ renderKPIs(); renderDashCharts(); renderTable('branchPerf'); }
+  else if(v==='products'){ renderProfitChart(); renderTable('topProducts'); renderTable('subgroupPerf'); }
+  else if(v==='inventory'){ renderTable('oos'); renderTable('low'); renderTable('over'); renderTable('fast'); }
+  else if(v==='branches'){ renderBranchChart(); renderTable('branchCompare'); }
+  else if(v==='transfers'){
+    const recs=computeTransferRecs();
+    $('#transferMeta').textContent=trf('tr.meta',{count:fmt(recs.length),days:state.transferDays,period:state.periodDays});
+    renderTable('transferTable');
+  }
+  else if(v==='branchreport'){ renderTable('branchReport'); }
+  else if(v==='datatable'){ renderTable('dataTable'); }
+  else if(v==='history'){ renderHistory(); renderPerf(); }
+}
+function renderAll(){
+  const has=allRows().length>0;
+  $('#emptyBanner').style.display=has?'none':'flex';
+  renderFilterChips();
+  renderView(state.view);
+}
+function setView(v){
+  state.view=v;
+  $$('.view').forEach(s=>s.classList.remove('active'));
+  const t=$('#view-'+v); if(t) t.classList.add('active');
+  $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  updateViewTitle();
+  renderView(v);
+  setTimeout(()=>{ document.querySelectorAll('#view-'+v+' canvas').forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.resize();}); },60);
+}
+
+/* ============================================================================
+   24. EVENT WIRING
+   ============================================================================ */
+function wire(){
+  $('#btnToggleSidebar').addEventListener('click',()=>{
+    $('#sidebar').classList.toggle('collapsed');
+    state.sidebarOpen=!$('#sidebar').classList.contains('collapsed');
+    savePrefs();
+    setTimeout(()=>document.querySelectorAll('canvas').forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.resize();}),280);
+  });
+  $$('.nav-item').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+
+  $('#btnTheme').addEventListener('click',()=>{
+    state.theme=state.theme==='light'?'dark':'light'; applyTheme(); savePrefs();
+  });
+  $('#btnLang').addEventListener('click',()=>{
+    state.lang=state.lang==='ar'?'en':'ar'; applyLang(); savePrefs();
+  });
+  $('#btnResetLayout').addEventListener('click',resetLayout);
+
+  $('#btnUpload').addEventListener('click',openUpload);
+  $('#sideUpload').addEventListener('click',openUpload);
+  $('#cancelUpload').addEventListener('click',closeUpload);
+  $('#modalBackdrop').addEventListener('click',closeUpload);
+  $('#fileInput').addEventListener('change',e=>{ pendingFile=e.target.files[0]||null; });
+  $$('#daysOpts .opt').forEach(b=>b.addEventListener('click',()=>{
+    $$('#daysOpts .opt').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    const d=b.dataset.days;
+    if(d==='custom'){ selectedDays='custom'; $('#customDays').style.display='block'; $('#customDays').focus(); }
+    else { selectedDays=Number(d); $('#customDays').style.display='none'; }
+  }));
+  $('#confirmUpload').addEventListener('click',handleUpload);
+
+  $('#modeSelect').addEventListener('change',e=>{
+    state.mode=e.target.value;
+    if(state.mode==='single' && !state.branch){
+      const first=allRows()[0]; if(first) state.branch=first.branchCode;
+    }
+    updateBranchLabel(); invalidateGlobal(); renderAll(); savePrefs();
+  });
+  $('#branchDDBtn').addEventListener('click',e=>{
+    e.stopPropagation();
+    if(state.mode==='all'){ showToast(tr('msg.switchMode')); return; }
+    $('#branchDD').classList.toggle('open');
+  });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#branchDD')) $('#branchDD').classList.remove('open');
+    if(!e.target.closest('#fpop') && !e.target.closest('.th-filter') && !e.target.closest('.btn')) closeFilterPopup();
+  });
+
+  $('#datasetSelect').addEventListener('change',e=>{
+    state.activeId=e.target.value;
+    const d=activeDataset();
+    if(d){ state.periodDays=d.periodDays; state.dataType=d.dataType; }
+    state.mode='all'; state.branch=''; state.branches=[]; $('#modeSelect').value='all';
+    Object.keys(tableState).forEach(k=>{ tableState[k].sig=''; });
+    renderBranchDropdown(); renderSubgroupSelect(); buildFilterUI(); invalidateGlobal(); renderAll();
+  });
+  $('#subgroupSelect').addEventListener('change',e=>{ state.quick.subgroup=e.target.value; invalidateGlobal(); renderAll(); });
+  $('#itemSearch').addEventListener('input',debounce(e=>{ state.quick.search=e.target.value; invalidateGlobal(); renderAll(); },280));
+  $('#btnFilters').addEventListener('click',openDrawer);
+  $('#closeDrawer').addEventListener('click',closeDrawer);
+  $('#drawerBackdrop').addEventListener('click',closeDrawer);
+  $('#applyFilters').addEventListener('click',()=>{ invalidateGlobal(); renderAll(); closeDrawer(); showToast(tr('msg.filtersApplied')); });
+  $('#btnClearFilters').addEventListener('click',()=>{ clearAllFilters(); showToast(tr('msg.filtersCleared')); });
+  $('#clearAllFilters2').addEventListener('click',()=>{ clearAllFilters(); closeDrawer(); });
+  $('#btnExport').addEventListener('click',exportCurrentView);
+
+  $('#transferDaysSelect').addEventListener('change',e=>{
+    const v=e.target.value;
+    if(v==='custom'){ $('#transferCustomDays').style.display='block'; state.transferDays=Number($('#transferCustomDays').value)||30; }
+    else { $('#transferCustomDays').style.display='none'; state.transferDays=Number(v); }
+    memo.tKey=null; renderView('transfers'); savePrefs();
+  });
+  $('#transferCustomDays').addEventListener('input',e=>{
+    const v=Number(e.target.value); if(v>0){ state.transferDays=v; memo.tKey=null; renderView('transfers'); }
+  });
+  $('#btnRecalcTransfers').addEventListener('click',()=>{ memo.tKey=null; renderView('transfers'); showToast(tr('msg.recalc')); });
+  $('#btnPrintTransfers').addEventListener('click',printTransfers);
+
+  $('#btnSaveSettings').addEventListener('click',()=>{
+    state.settings.safetyStock=Number($('#setSafety').value)||0;
+    state.settings.lowStock=Number($('#setLow').value)||0;
+    state.settings.fastMoving=Number($('#setFast').value)||0;
+    state.settings.overstockDays=Number($('#setOverDays').value)||60;
+    state.settings.overstockQty=Number($('#setOverQty').value)||0;
+    state.settings.defaultTransferDays=Number($('#setTransferDays').value)||30;
+    saveSettings(); invalidateGlobal(); renderAll(); showToast(tr('msg.settingsSaved'));
+  });
+  $('#btnClearCache').addEventListener('click',()=>{
+    invalidateGlobal();
+    Object.keys(tableState).forEach(k=>{ tableState[k].sig=''; tableState[k].filtRows=null; });
+    renderAll(); showToast(tr('msg.cacheCleared'));
+  });
+
+  /* filter popup buttons */
+  $('#fpopClose').addEventListener('click',closeFilterPopup);
+  $('#fpopClear').addEventListener('click',()=>{
+    if(!fpopCtx) return;
+    const st=getTableState(fpopCtx.tableId);
+    delete st.filters[fpopCtx.colKey]; st.page=0; st.sig='';
+    renderTable(fpopCtx.tableId); closeFilterPopup();
+  });
+  $('#fpopApply').addEventListener('click',()=>{
+    if(!fpopCtx) return;
+    const {tableId,colKey}=fpopCtx;
+    const spec=TABLE_SPECS[tableId], st=getTableState(tableId), col=spec.colMap[colKey];
+    const op=$('#fpOp').value, v1=$('#fpV1').value, v2=$('#fpV2').value;
+    const values=[...document.querySelectorAll('#fpVals input:checked')].map(i=>i.value);
+    const f={op,v1,v2,values};
+    f.active=!!(v1!==''||(op==='between'&&v2!=='')||values.length);
+    if(f.active) st.filters[colKey]=f; else delete st.filters[colKey];
+    st.page=0; st.sig='';
+
+    /* apply to all reports */
+    const toAll=$('#fpopApplyAll').checked;
+    if(toAll){
+      Object.keys(TABLE_SPECS).forEach(otherId=>{
+        if(otherId===tableId) return;
+        const ospec=TABLE_SPECS[otherId];
+        if(!ospec.colMap[colKey]) return;
+        const ost=getTableState(otherId);
+        if(f.active) ost.filters[colKey]=JSON.parse(JSON.stringify(f));
+        else delete ost.filters[colKey];
+        ost.page=0; ost.sig='';
+      });
+    }
+
+    renderTable(tableId);
+    if(toAll) Object.keys(TABLE_SPECS).forEach(oid=>{ if(oid!==tableId) renderTable(oid); });
+    closeFilterPopup();
+  });
+
+  /* transfer table row actions (delegated) */
+  document.addEventListener('click',e=>{
+    const ap=e.target.closest('[data-approve]');
+    if(ap){ setTransferStatus(ap.dataset.approve,'Approved'); return; }
+    const rj=e.target.closest('[data-reject]');
+    if(rj){ setTransferStatus(rj.dataset.reject,'Rejected'); return; }
+  });
+  document.addEventListener('change',e=>{
+    const inp=e.target.closest('[data-edit]');
+    if(inp){
+      const k=inp.dataset.edit, v=Math.max(0,Number(inp.value)||0);
+      state.transferStatus[k]=Object.assign(state.transferStatus[k]||{},{qty:v});
+      memo.tKey=null;
+      renderTable('transferTable'); renderTable('branchReport');
+    }
+  });
+
+  /* glow follow */
+  document.addEventListener('mousemove',e=>{
+    const el=e.target.closest('.glow'); if(!el) return;
+    const r=el.getBoundingClientRect();
+    el.style.setProperty('--mx',(e.clientX-r.left)+'px');
+    el.style.setProperty('--my',(e.clientY-r.top)+'px');
+  },{passive:true});
+}
+
+/* ============================================================================
+   25. INIT
+   ============================================================================ */
+async function init(){
+  loadPrefs();
+  applyTheme();
+  defineSpecs();
+  loadTablePrefs();
+  wire();
+  initWidgetTools();
+
+  document.querySelectorAll('.widget').forEach(w=>{
+    w.style.gridColumn='span '+(w.dataset.span||6);
+    w.style.height=(w.dataset.h||320)+'px';
+    makeResizable(w); makeDraggable(w);
+  });
+  document.querySelectorAll('.kpi-card').forEach(makeResizable);
+  applyLayout();
+
+  $('#setSafety').value=state.settings.safetyStock;
+  $('#setLow').value=state.settings.lowStock;
+  $('#setFast').value=state.settings.fastMoving;
+  $('#setOverDays').value=state.settings.overstockDays;
+  $('#setOverQty').value=state.settings.overstockQty;
+  $('#setTransferDays').value=state.settings.defaultTransferDays;
+
+  state.transferDays=state.settings.defaultTransferDays||30;
+  const tsel=$('#transferDaysSelect');
+  if(['7','14','30'].includes(String(state.transferDays))) tsel.value=String(state.transferDays);
+  else { tsel.value='custom'; $('#transferCustomDays').style.display='block'; $('#transferCustomDays').value=state.transferDays; }
+
+  await refreshDatasets();
+  applyLang();
+  setView('dashboard');
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
