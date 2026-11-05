@@ -368,6 +368,106 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
   .kpi-card{width:calc(50% - 6px)}
   .widget{grid-column:span 12!important}
 }
+ /* MOBILE APP DESIGN START */
+ @media (max-width: 600px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    width: 85%;
+    max-width: 280px;
+  }
+
+  .main {
+    width: 100%;
+    margin: 0;
+    padding: 12px;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+  }
+
+  .kpi-card {
+    width: calc(50% - 6px);
+    min-width: 0;
+  }
+
+  .widget {
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 12px;
+  }
+
+  .views {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  .controlbar {
+    flex-wrap: wrap;
+  }
+}
+ @media (max-width: 600px) {
+  #sidebar {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    z-index: 100;
+    border-radius: 16px 16px 0 0;
+    padding: 8px;
+  }
+
+  #sidebar .brand,
+  #sidebar .side-foot {
+    display: none;
+  }
+
+  #nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  #nav .nav-item {
+    min-width: 0;
+    padding: 8px 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 10px;
+    text-align: center;
+  }
+
+  #nav .nav-item i {
+    font-size: 19px;
+  }
+
+  #nav .nav-item span {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .main {
+    padding-bottom: 95px;
+  }
+
+  #btnToggleSidebar {
+    display: none;
+  }
+}
 </style>
  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
