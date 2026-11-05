@@ -3051,15 +3051,22 @@ function initBarcodeScanner() {
   const modal = document.createElement('div');
   modal.id = 'barcodeScannerModal';
   modal.style.cssText = `
-    display:none;position:fixed;inset:0;z-index:99999;
-    background:rgba(0,0,0,.75);align-items:center;
-    justify-content:center;padding:15px;
+   display:none;position:fixed;inset:0;z-index:99999;
+overflow-y:auto;
+    background:rgba(0,0,0,.75);
+  justify-content:center;align-items:center;padding:12px;
+box-sizing:border-box;
   `;
 
   modal.innerHTML = `
     <div style="background:var(--panel);color:var(--text);
-      width:100%;max-width:480px;padding:20px;border-radius:16px;
-      max-height:90vh;overflow:auto;">
+      width:calc(100vw - 24px);
+max-width:480px;
+padding:14px;
+border-radius:14px;
+max-height:85vh;
+overflow:auto;
+box-sizing:border-box;">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3>📷 Barcode Scanner</h3>
         <button id="barcodeClose" class="btn">✕</button>
