@@ -3020,6 +3020,17 @@ function initBarcodeScanner() {
         <button id="barcodeClose" class="btn">✕</button>
       </div>
       <div id="barcodeReader" style="width:100%;margin:15px 0"></div>
+      <div style="display:flex;gap:8px;margin:12px 0">
+  <input id="manualBarcodeInput" type="text"
+    placeholder="Enter barcode manually..."
+    style="flex:1;min-width:0;padding:12px;border-radius:8px;
+    border:1px solid var(--border);background:var(--bg);
+    color:var(--text);font-size:15px">
+
+  <button id="manualBarcodeSearch" class="btn primary">
+    Search
+  </button>
+</div>
       <div id="barcodeResult"></div>
       <button id="barcodeRescan" class="btn"
         style="display:none;width:100%;margin-top:12px">
@@ -3032,6 +3043,30 @@ function initBarcodeScanner() {
   btn.onclick = openBarcodeScanner;
   modal.querySelector('#barcodeClose').onclick = closeBarcodeScanner;
   modal.querySelector('#barcodeRescan').onclick = openBarcodeScanner;
+ modal.querySelector('#manualBarcodeSearch').onclick = async () => {
+  const input = modal.querySelector('#manualBarcodeInput');
+  const code = input.value.trim();
+
+  if (!code) {
+    alert('Barcode enter karo');
+    input.focus();
+    return;
+  }
+
+  if (barcodeScanner) {
+    try { await barcodeScanner.stop(); } catch(e) {}
+  }
+
+  modal.querySelector('#barcodeReader').style.display = 'none';
+  modal.querySelector('#barcodeRescan').style.display = 'block';
+  showBarcodeItem(code);
+};
+
+modal.querySelector('#manualBarcodeInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    modal.querySelector('#manualBarcodeSearch').click();
+  }
+});
 }
 
 function loadBarcodeLibrary() {
