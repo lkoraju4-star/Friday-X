@@ -3157,6 +3157,24 @@ async function openBarcodeScanner() {
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 250, height: 150 } },
       async (decodedText) => {
+       try {
+  const beep = new AudioContext();
+  const oscillator = beep.createOscillator();
+  const gain = beep.createGain();
+
+  oscillator.connect(gain);
+  gain.connect(beep.destination);
+
+  oscillator.frequency.value = 1000;
+  gain.gain.value = 0.15;
+
+  oscillator.start();
+  oscillator.stop(beep.currentTime + 0.15);
+
+  oscillator.onended = () => beep.close();
+} catch(e) {
+  console.log('Beep sound unavailable', e);
+}
         try { await barcodeScanner.stop(); } catch(e) {}
         reader.style.display = 'none';
         rescan.style.display = 'block';
