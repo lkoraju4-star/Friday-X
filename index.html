@@ -758,6 +758,7 @@ const DB_NAME='retailbi_db_v4', STORE='datasets';
 
 const COLUMNS=[
   {key:'itemCode',    label:'Item Code',                 type:'text'},
+ {key:'barcode',    label:'Barcode',                   type:'text'},
   {key:'itemName',    label:'Item Name',                 type:'text'},
   {key:'branchCode',  label:'Branch Code',               type:'text'},
   {key:'subgroupCode',label:'Subgroup Code',             type:'text'},
@@ -1174,6 +1175,7 @@ function applyLang(){
    8. EXCEL PARSING
    ============================================================================ */
 const HEADER_MAP={
+  barcode:'barcode', barcodes:'barcode', ean:'barcode', ean13:'barcode', upc:'barcode', gtin:'barcode',
   itemcode:'itemCode', itemcode1:'itemCode', code:'itemCode', itemno:'itemCode',
   itemname:'itemName', itemdescription:'itemName', description:'itemName', item:'itemName',
   branchcode:'branchCode', branch:'branchCode', branchname:'branchCode',
@@ -1215,7 +1217,7 @@ function mapHeaders(row){
 }
 function normalizeRow(r){
   const o={
-    itemCode:str(r.itemCode), itemName:str(r.itemName), branchCode:str(r.branchCode)||'UNKNOWN',
+    itemCode:str(r.itemCode), barcode:str(r.barcode), itemName:str(r.itemName), branchCode:str(r.branchCode)||'UNKNOWN',
     subgroupCode:str(r.subgroupCode), subgroupName:str(r.subgroupName)||'—',
     unit:str(r.unit)||'PCS',
     qty:num(r.qty), invoice:num(r.invoice), cost:num(r.cost), profit:num(r.profit),
@@ -1233,8 +1235,8 @@ function aoaToRows(aoa){
   }
   if(hdrIdx<0){
     hdrIdx=0;
-    mapping={0:'itemCode',1:'itemName',2:'branchCode',3:'subgroupCode',4:'subgroupName',
-             5:'unit',6:'qty',7:'invoice',8:'cost',9:'profit',10:'margin',11:'stock'};
+    mapping={0:'itemCode',1:'barcode',2:'itemName',3:'branchCode',4:'subgroupCode',5:'subgroupName',
+         6:'unit',7:'qty',8:'invoice',9:'cost',10:'profit',11:'margin',12:'stock'};
   }
   const keys=Object.keys(mapping);
   const rows=[];
@@ -3087,9 +3089,11 @@ async function openBarcodeScanner() {
 function showBarcodeItem(code) {
   const result = document.getElementById('barcodeResult');
 
-  const matches = allRows().filter(r =>
-    String(r.itemCode).trim() === String(code).trim()
-  );
+  const scannedCode = String(code).trim();
+
+const matches = allRows().filter(r =>
+  String(r.barcode || '').trim() === scannedCode
+);
 
   if (!matches.length) {
     result.innerHTML = `
