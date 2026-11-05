@@ -11,7 +11,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-<style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <style>
 /* ============================================================
    DESIGN TOKENS
    ============================================================ */
@@ -260,6 +261,12 @@ input[type="search"]:focus{border-color:var(--primary)}
   .card{box-shadow:none;border:1px solid #ccc}
 }
 </style>
+<script>
+window.halaSupabase = window.supabase.createClient(
+  'https://qihuxtzmnwnlijjdpinb.supabase.co',
+  'sb_publishable_lUXQ7tLTiOt_qs9gc59lsQ_I9_RaNA6'
+);
+</script>
 </head>
 <body>
 
@@ -1991,7 +1998,42 @@ async function handleFile(file){
     // persist in history
     const id = 'UP-' + new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,14);
     try{
-      await DB.put({
+            const { data: authData } = await window.halaSupabase.auth.getSession();
+
+      if (!authData.session) {
+        const email = prompt('Admin email:');
+        const password = prompt('Admin password:');
+
+        if (!email || !password) throw new Error('Admin login cancelled');
+
+        const { error: loginError } = await window.halaSupabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (loginError) throw loginError;
+      }
+
+      const { error: cloudError } = await window.halaSupabase
+        .from('sales_records')
+        .insert({
+          data: {
+            id,
+            fileName: file.name,
+            uploadDate: Date.now(),
+            dataType: 'snapshot',
+            records: report.rows.length,
+            branches: model.totals.branches,
+            products: model.totals.items,
+            totalSales: model.totals.sales,
+            totalProfit: model.totals.profit,
+            valid: true,
+            rows: report.rows
+          }
+        });
+
+      if (cloudError) throw cloudError;
+       await DB.put({
         id,
         fileName: file.name,
         uploadDate: Date.now(),
@@ -2004,15 +2046,8 @@ async function handleFile(file){
         valid: true,
         rows: report.rows
       });
-    }catch(err){
-      // fallback: store summary only
-      try{
-        await DB.put({
-          id, fileName:file.name, uploadDate:Date.now(), dataType:'summary-only',
-          records:report.rows.length, branches:model.totals.branches, products:model.totals.items,
-          totalSales:model.totals.sales, totalProfit:model.totals.profit, valid:true, rows:null
-        });
-      }catch(e2){ /* ignore */ }
+        }catch(err){
+      throw err;
     }
 
     setStep(4,'done'); setProgress(100);
@@ -2443,24 +2478,41 @@ function applySettingsFromDOM(){
 
   navigate('dashboard');
 
-  // restore last session dataset from history (most recent) so reloads keep working
-  DB.all().then(list => {
-    if (!list || !list.length) return;
-    list.sort((a,b) => b.uploadDate - a.uploadDate);
-    const last = list[0];
-    if (last && last.rows && last.rows.length){
+    // Load latest dashboard data from Supabase
+  window.halaSupabase
+    .from('sales_records')
+    .select('data')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+    .then(({ data, error }) => {
+      if (error) throw error;
+
+      const last = data && data.data;
+      if (!last || !last.rows || !last.rows.length) return;
+
       S.rows = last.rows;
       S.model = buildModel(last.rows, S.settings);
       S.uploadMeta = {
-        fileName: last.fileName, uploadDate: last.uploadDate,
-        records: last.records, branches: last.branches, products: last.products,
-        missing: [], warnings: [], valid: true, skipped: 0, duplicates: 0
+        fileName: last.fileName,
+        uploadDate: last.uploadDate,
+        records: last.records,
+        branches: last.branches,
+        products: last.products,
+        missing: [],
+        warnings: [],
+        valid: true,
+        skipped: 0,
+        duplicates: 0
       };
-      S.selBranch = S.model.branchStats.length ? S.model.branchStats[0].code : null;
+
+      S.selBranch = S.model.branchStats.length
+        ? S.model.branchStats[0].code : null;
+
       updateFileInfo();
       if (S.currentPage === 'dashboard') navigate('dashboard');
-    }
-  }).catch(() => {});
+    })
+    .catch(err => console.error('Supabase load failed:', err));
 
   window.addEventListener('resize', () => {
     if (window.innerWidth > 980) $('#sidebar').classList.remove('open');
