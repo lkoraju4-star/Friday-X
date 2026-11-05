@@ -3159,7 +3159,7 @@ console.log('CHECK BARCODE:', matches[0].barcode);
 
   result.innerHTML = `
     <h3>Item Found</h3>
-    <p><b>Barcode:</b> ${esc(code)}</p>
+    <p><b>Barcode:</b> ${esc(matches[0].barcode || 'Not Available')}</p>
     <p><b>Item Code:</b> ${esc(matches[0].itemCode)}</p>
     <p><b>Item:</b> ${esc(itemName)}</p>
     <h4>All Branch Stock</h4>
