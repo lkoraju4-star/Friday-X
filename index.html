@@ -3134,7 +3134,8 @@ function showBarcodeItem(code) {
  console.log('SCANNED BARCODE:', JSON.stringify(scannedCode));
 
 const matches = allRows().filter(r =>
-  String(r.barcode || '').trim() === scannedCode
+  String(r.barcode || '').trim() === scannedCode ||
+  String(r.itemCode || '').trim() === scannedCode
 );
 
   if (!matches.length) {
