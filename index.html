@@ -3158,6 +3158,7 @@ const matches = allRows().filter(r =>
   result.innerHTML = `
     <h3>Item Found</h3>
     <p><b>Barcode:</b> ${esc(code)}</p>
+    <p><b>Item Code:</b> ${esc(matches[0].itemCode)}</p>
     <p><b>Item:</b> ${esc(itemName)}</p>
     <h4>All Branch Stock</h4>
     <table style="width:100%;border-collapse:collapse">
