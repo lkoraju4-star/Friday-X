@@ -2984,6 +2984,7 @@ async function init(){
   defineSpecs();
   loadTablePrefs();
   wire();
+  initBarcodeScanner();
   initWidgetTools();
 
   document.querySelectorAll('.widget').forEach(w=>{
