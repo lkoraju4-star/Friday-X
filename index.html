@@ -3147,6 +3147,8 @@ const matches = allRows().filter(r =>
   }
 
   const itemName = matches[0].itemName || 'Unknown Item';
+ console.log('CHECK ITEM CODE:', matches[0].itemCode);
+console.log('CHECK BARCODE:', matches[0].barcode);
   const branchStock = new Map();
 
   matches.forEach(r => {
