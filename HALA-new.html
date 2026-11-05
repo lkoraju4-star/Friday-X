@@ -2638,6 +2638,43 @@ async function handleUpload(){
       branchCount:branches.size, productCount:products.size,
       totalSales, totalProfit, status:'OK', rows
     };
+        // Supabase Cloud Save
+    const { data: authData, error: sessionError } =
+      await window.halaSupabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!authData.session) {
+      const email = prompt('Admin email:');
+      const password = prompt('Admin password:');
+
+      if (!email || !password) {
+        throw new Error('Admin login cancelled');
+      }
+
+      const { data: loginData, error: loginError } =
+        await window.halaSupabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if (loginError) throw loginError;
+      if (!loginData.session) throw new Error('Admin login failed');
+    }
+
+    const { error: cloudError } = await window.halaSupabase
+      .from('sales_records')
+      .insert({
+        data: {
+          ...ds,
+          records: rows.length,
+          branches: branches.size,
+          products: products.size,
+          valid: true
+        }
+      });
+
+    if (cloudError) throw cloudError;
     await dbPut(ds);
     state.activeId=ds.id; state.periodDays=days; state.dataType=dataType;
     state.mode='all'; state.branch=''; state.branches=[];
@@ -2889,6 +2926,49 @@ function wire(){
 }
 
 /* ============================================================================
+   SUPABASE CLOUD LOAD + LIVE REFRESH
+   ============================================================================ */
+
+async function loadCloudDataset(){
+  try{
+    const { data, error } = await window.halaSupabase
+      .from('sales_records')
+      .select('data')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if(error) throw error;
+
+    const ds = data?.data;
+    if(!ds?.rows?.length) return;
+
+    await dbPut(ds);
+    state.activeId = ds.id;
+    await refreshDatasets();
+    renderAll();
+
+  }catch(err){
+    console.error('Cloud load failed:', err);
+  }
+}
+
+function startCloudRealtime(){
+  window.halaSupabase
+    .channel('hala-live-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'sales_records'
+      },
+      () => loadCloudDataset()
+    )
+    .subscribe();
+}
+
+/* ============================================================================
    25. INIT
    ============================================================================ */
 async function init(){
@@ -2919,9 +2999,11 @@ async function init(){
   if(['7','14','30'].includes(String(state.transferDays))) tsel.value=String(state.transferDays);
   else { tsel.value='custom'; $('#transferCustomDays').style.display='block'; $('#transferCustomDays').value=state.transferDays; }
 
+  await loadCloudDataset();
   await refreshDatasets();
   applyLang();
   setView('dashboard');
+  startCloudRealtime();
 }
 
 document.addEventListener('DOMContentLoaded',init);
