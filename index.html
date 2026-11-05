@@ -371,10 +371,19 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
 </style>
  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-window.halaSupabase = window.supabase.createClient(
-  'https://qihuxtzmnwnlijjdpinb.supabase.co',
-  'sb_publishable_lUXQ7tLTiOt_qs9gc59lsQ_I9_RaNA6'
-);
+window.halaSupabase = null;
+
+window.addEventListener('load', function () {
+  if (window.supabase && window.supabase.createClient) {
+    window.halaSupabase = window.supabase.createClient(
+      'https://qihuxtzmnwnlijjdpinb.supabase.co',
+      'sb_publishable_lUXQ7tLTiOt_qs9gc59lsQ_I9_RaNA6'
+    );
+    console.log('HALA Supabase connected');
+  } else {
+    console.error('Supabase library load nahi hui');
+  }
+});
 </script>
 </head>
 <body>
