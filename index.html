@@ -2513,6 +2513,56 @@ function applySettingsFromDOM(){
       if (S.currentPage === 'dashboard') navigate('dashboard');
     })
     .catch(err => console.error('Supabase load failed:', err));
+     // HALA LIVE AUTO REFRESH
+  window.halaSupabase
+    .channel('hala-live-updates')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'sales_records'
+      },
+      async () => {
+        const { data, error } = await window.halaSupabase
+          .from('sales_records')
+          .select('data')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Live refresh failed:', error);
+          return;
+        }
+
+        const last = data?.data;
+        if (!last?.rows?.length) return;
+
+        S.rows = last.rows;
+        S.model = buildModel(last.rows, S.settings);
+
+        S.uploadMeta = {
+          fileName: last.fileName,
+          uploadDate: last.uploadDate,
+          records: last.records,
+          branches: last.branches,
+          products: last.products,
+          missing: [],
+          warnings: [],
+          valid: true,
+          skipped: 0,
+          duplicates: 0
+        };
+
+        S.selBranch = S.model.branchStats.length
+          ? S.model.branchStats[0].code : null;
+
+        updateFileInfo();
+        navigate(S.currentPage);
+      }
+    )
+    .subscribe();
 
   window.addEventListener('resize', () => {
     if (window.innerWidth > 980) $('#sidebar').classList.remove('open');
