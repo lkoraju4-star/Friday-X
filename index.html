@@ -2975,6 +2975,175 @@ function startCloudRealtime(){
     .subscribe();
 }
 
+ 
+/* ============================================================================
+   BARCODE CAMERA SCANNER
+   ============================================================================ */
+
+let barcodeScanner = null;
+
+function initBarcodeScanner() {
+  if (document.getElementById('barcodeCameraBtn')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'barcodeCameraBtn';
+  btn.innerHTML = '📷 Scan Barcode';
+  btn.style.cssText = `
+    position:fixed;right:22px;bottom:22px;z-index:99990;
+    padding:14px 20px;border:0;border-radius:12px;
+    background:var(--accent);color:white;font-size:14px;
+    font-weight:bold;cursor:pointer;box-shadow:var(--shadow);
+  `;
+  document.body.appendChild(btn);
+
+  const modal = document.createElement('div');
+  modal.id = 'barcodeScannerModal';
+  modal.style.cssText = `
+    display:none;position:fixed;inset:0;z-index:99999;
+    background:rgba(0,0,0,.75);align-items:center;
+    justify-content:center;padding:15px;
+  `;
+
+  modal.innerHTML = `
+    <div style="background:var(--panel);color:var(--text);
+      width:100%;max-width:480px;padding:20px;border-radius:16px;
+      max-height:90vh;overflow:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>📷 Barcode Scanner</h3>
+        <button id="barcodeClose" class="btn">✕</button>
+      </div>
+      <div id="barcodeReader" style="width:100%;margin:15px 0"></div>
+      <div id="barcodeResult"></div>
+      <button id="barcodeRescan" class="btn"
+        style="display:none;width:100%;margin-top:12px">
+        Scan Another Item
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  btn.onclick = openBarcodeScanner;
+  modal.querySelector('#barcodeClose').onclick = closeBarcodeScanner;
+  modal.querySelector('#barcodeRescan').onclick = openBarcodeScanner;
+}
+
+function loadBarcodeLibrary() {
+  return new Promise((resolve, reject) => {
+    if (window.Html5Qrcode) return resolve();
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Scanner library load failed'));
+    document.head.appendChild(script);
+  });
+}
+
+async function openBarcodeScanner() {
+  const modal = document.getElementById('barcodeScannerModal');
+  const result = document.getElementById('barcodeResult');
+  const reader = document.getElementById('barcodeReader');
+  const rescan = document.getElementById('barcodeRescan');
+
+  modal.style.display = 'flex';
+  result.innerHTML = '';
+  rescan.style.display = 'none';
+  reader.style.display = 'block';
+
+  try {
+    if (!allRows().length) {
+      result.textContent = 'Pehle Excel data upload karo.';
+      return;
+    }
+
+    await loadBarcodeLibrary();
+
+    if (barcodeScanner) {
+      try { await barcodeScanner.stop(); } catch(e) {}
+      barcodeScanner.clear();
+      barcodeScanner = null;
+    }
+
+    barcodeScanner = new Html5Qrcode('barcodeReader');
+
+    await barcodeScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 150 } },
+      async (decodedText) => {
+        try { await barcodeScanner.stop(); } catch(e) {}
+        reader.style.display = 'none';
+        rescan.style.display = 'block';
+        showBarcodeItem(decodedText);
+      },
+      () => {}
+    );
+
+  } catch (err) {
+    console.error(err);
+    result.textContent =
+      'Camera start nahi hua. Camera permission allow karo aur HTTPS website use karo.';
+  }
+}
+
+function showBarcodeItem(code) {
+  const result = document.getElementById('barcodeResult');
+
+  const matches = allRows().filter(r =>
+    String(r.itemCode).trim() === String(code).trim()
+  );
+
+  if (!matches.length) {
+    result.innerHTML = `
+      <h3>Item Not Found</h3>
+      <p>Barcode: <b>${esc(code)}</b></p>
+    `;
+    return;
+  }
+
+  const itemName = matches[0].itemName || 'Unknown Item';
+  const branchStock = new Map();
+
+  matches.forEach(r => {
+    const branch = String(r.branchCode || 'Unknown');
+    const old = branchStock.get(branch) || 0;
+    branchStock.set(branch, old + (Number(r.stock) || 0));
+  });
+
+  result.innerHTML = `
+    <h3>Item Found</h3>
+    <p><b>Barcode:</b> ${esc(code)}</p>
+    <p><b>Item:</b> ${esc(itemName)}</p>
+    <h4>All Branch Stock</h4>
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Branch</th>
+          <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border)">Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${[...branchStock.entries()].map(([branch, stock]) => `
+          <tr>
+            <td style="padding:8px;border-bottom:1px solid var(--border)">${esc(branch)}</td>
+            <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border)">${fmt(stock)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function closeBarcodeScanner() {
+  if (barcodeScanner) {
+    try { await barcodeScanner.stop(); } catch(e) {}
+    try { barcodeScanner.clear(); } catch(e) {}
+    barcodeScanner = null;
+  }
+
+  document.getElementById('barcodeScannerModal').style.display = 'none';
+}
+
+ 
 /* ============================================================================
    25. INIT
    ============================================================================ */
