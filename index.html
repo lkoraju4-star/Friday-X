@@ -3085,6 +3085,17 @@ box-sizing:border-box;">
     Search
   </button>
 </div>
+<div style="display:flex;gap:8px;margin:12px 0">
+  <input id="itemNameSearchInput" type="text"
+    placeholder="Search item by name..."
+    style="flex:1;min-width:0;padding:12px;border-radius:8px;
+    border:1px solid var(--border);background:var(--bg);
+    color:var(--text);font-size:15px">
+
+  <button id="itemNameSearchBtn" class="btn primary">
+    Search
+  </button>
+</div>
       <div id="barcodeResult"></div>
       <button id="barcodeRescan" class="btn"
         style="display:none;width:100%;margin-top:12px">
@@ -3119,6 +3130,30 @@ box-sizing:border-box;">
 modal.querySelector('#manualBarcodeInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     modal.querySelector('#manualBarcodeSearch').click();
+  }
+});
+ modal.querySelector('#itemNameSearchBtn').onclick = async () => {
+  const input = modal.querySelector('#itemNameSearchInput');
+  const name = input.value.trim();
+
+  if (!name) {
+    alert('Item name enter karo');
+    input.focus();
+    return;
+  }
+
+  if (barcodeScanner) {
+    try { await barcodeScanner.stop(); } catch(e) {}
+  }
+
+  modal.querySelector('#barcodeReader').style.display = 'none';
+  modal.querySelector('#barcodeRescan').style.display = 'block';
+  showBarcodeItem(name, true);
+};
+
+modal.querySelector('#itemNameSearchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    modal.querySelector('#itemNameSearchBtn').click();
   }
 });
 }
@@ -3199,40 +3234,65 @@ async function openBarcodeScanner() {
   }
 }
 
-function showBarcodeItem(code) {
+function showBarcodeItem(code, searchByName = false) {
   const result = document.getElementById('barcodeResult');
 
   const scannedCode = String(code).trim();
  console.log('SCANNED BARCODE:', JSON.stringify(scannedCode));
 
 const matches = allRows().filter(r =>
-  String(r.barcode || '').trim() === scannedCode ||
-  String(r.itemCode || '').trim() === scannedCode
+  searchByName
+    ? String(r.itemName || '').toLowerCase().includes(scannedCode.toLowerCase())
+    : String(r.barcode || '').trim() === scannedCode ||
+      String(r.itemCode || '').trim() === scannedCode
 );
-
+ 
   if (!matches.length) {
     result.innerHTML = `
       <h3>Item Not Found</h3>
-      <p>Barcode: <b>${esc(code)}</b></p>
+      <p>${searchByName ? 'Item Name' : 'Barcode'}: <b>${esc(code)}</b></p>
     `;
     return;
   }
 
-  const itemName = matches[0].itemName || 'Unknown Item';
- console.log('CHECK ITEM CODE:', matches[0].itemCode);
-console.log('CHECK BARCODE:', matches[0].barcode);
-  const branchStock = new Map();
+const uniqueItems = [...new Map(
+  matches.map(r => [String(r.itemCode || r.itemName), r])
+).values()];
 
-  matches.forEach(r => {
+if (searchByName && uniqueItems.length > 1) {
+  result.innerHTML = `
+    <h3>Matching Items</h3>
+    ${uniqueItems.map(item => `
+      <button class="btn" style="display:block;width:100%;margin:8px 0;text-align:left"
+        onclick="showBarcodeItem('${String(item.itemCode || '').replace(/'/g, "\\'")}')">
+        ${esc(item.itemName)} — ${esc(item.itemCode)}
+      </button>
+    `).join('')}
+  `;
+  return;
+}
+
+const selectedCode = String(uniqueItems[0].itemCode || '');
+const itemName = uniqueItems[0].itemName || 'Unknown Item';
+
+console.log('CHECK ITEM CODE:', selectedCode);
+console.log('CHECK BARCODE:', uniqueItems[0].barcode);
+
+const selectedRows = matches.filter(r =>
+  String(r.itemCode || '') === selectedCode
+);
+
+const branchStock = new Map();
+  selectedRows.forEach(r => {
     const branch = String(r.branchCode || 'Unknown');
     const old = branchStock.get(branch) || 0;
     branchStock.set(branch, old + (Number(r.stock) || 0));
   });
 
-  result.innerHTML = `
+result.innerHTML = `
     <h3>Item Found</h3>
-    <p><b>Barcode:</b> ${esc(matches[0].barcode || 'Not Available')}</p>
-    <p><b>Item Code:</b> ${esc(matches[0].itemCode)}</p>
+    <p><b>Barcode:</b> ${esc(uniqueItems[0].barcode || 'Not Available')}</p>
+    <p><b>Item Code:</b> ${esc(uniqueItems[0].itemCode)}</p>
     <p><b>Item:</b> ${esc(itemName)}</p>
     <h4>All Branch Stock</h4>
     <table style="width:100%;border-collapse:collapse">
@@ -3253,7 +3313,6 @@ console.log('CHECK BARCODE:', matches[0].barcode);
     </table>
   `;
 }
-
 async function closeBarcodeScanner() {
   if (barcodeScanner) {
     try { await barcodeScanner.stop(); } catch(e) {}
