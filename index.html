@@ -377,10 +377,28 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
     overflow-x: hidden;
   }
 
-  .sidebar {
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: 85%;
     max-width: 280px;
-  }
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+}
+
+.sidebar:not(.collapsed) {
+    transform: translateX(0);
+}
+
+.sidebar.collapsed {
+    width: 85%;
+    max-width: 280px;
+    flex-basis: 280px;
+    transform: translateX(-100%);
+}
 
   .main {
     width: 100%;
@@ -2871,7 +2889,18 @@ function setView(v){
   setTimeout(()=>{ document.querySelectorAll('#view-'+v+' canvas').forEach(c=>{const ch=Chart.getChart(c);if(ch)ch.resize();}); },60);
 }
 
-/* ============================================================================
+
+  $('#drawerBackdrop').addEventListener('click',closeDrawer);
+  $('#applyFilters').addEventListener('click',()=>{ invalidateGlobal(); renderAll(); closeDrawer(); showToast(tr('msg.filtersApplied')); });
+  $('#btnClearFilters').addEventListener('click',()=>{ clearAllFilters(); showToast(tr('msg.filtersCleared')); });
+  $('#clearAllFilters2').addEventListener('click',()=>{ clearAllFilters(); closeDrawer(); });
+  $('#btnExport').addEventListener('click',exportCurrentView);
+
+  $('#transferDaysSelect').addEventListener('change',e=>{
+    const v=e.target.value;
+    if(v==='custom'){ $('#transferCustomDays').style.displ/
+   
+    * ============================================================================
    24. EVENT WIRING
    ============================================================================ */
 function wire(){
@@ -2942,16 +2971,7 @@ if (mobileFilterToggle && controlbar) {
     mobileFilterToggle.textContent = collapsed ? '▼ Show Filters' : '▲ Hide Filters';
   });
 }
-  $('#closeDrawer').addEventListener('click',closeDrawer);
-  $('#drawerBackdrop').addEventListener('click',closeDrawer);
-  $('#applyFilters').addEventListener('click',()=>{ invalidateGlobal(); renderAll(); closeDrawer(); showToast(tr('msg.filtersApplied')); });
-  $('#btnClearFilters').addEventListener('click',()=>{ clearAllFilters(); showToast(tr('msg.filtersCleared')); });
-  $('#clearAllFilters2').addEventListener('click',()=>{ clearAllFilters(); closeDrawer(); });
-  $('#btnExport').addEventListener('click',exportCurrentView);
-
-  $('#transferDaysSelect').addEventListener('change',e=>{
-    const v=e.target.value;
-    if(v==='custom'){ $('#transferCustomDays').style.display='block'; state.transferDays=Number($('#transferCustomDays').value)||30; }
+  $('#closeDrawer').addEventListener('click',closeDrawer);ay='block'; state.transferDays=Number($('#transferCustomDays').value)||30; }
     else { $('#transferCustomDays').style.display='none'; state.transferDays=Number(v); }
     memo.tKey=null; renderView('transfers'); savePrefs();
   });
