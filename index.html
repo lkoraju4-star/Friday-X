@@ -1904,8 +1904,23 @@ function bindTableEvents(id, el, spec, st){
   /* search */
   const search=el.querySelector('[data-tblsearch]');
   if(search){
-    const onSearch=debounce(()=>{ st.search=search.value.trim(); st.page=0; renderTable(id); },250);
-    search.addEventListener('input',onSearch);
+    const onSearch = debounce(() => {
+  const cursorPosition = search.selectionStart;
+
+  st.search = search.value.trim();
+  st.page = 0;
+
+  renderTable(id);
+
+  const newSearch = el.querySelector('[data-tblsearch]');
+
+  if (newSearch) {
+    newSearch.focus();
+    newSearch.setSelectionRange(cursorPosition, cursorPosition);
+  }
+}, 250);
+
+search.addEventListener('input', onSearch);
   }
 
   /* header sort + filter + resize + drag */
