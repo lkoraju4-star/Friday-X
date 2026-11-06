@@ -1,12 +1,24 @@
 {
   "id": "./",
-  "name": "HALA - Retail Intelligence",
-  "short_name": "HALA",
+  "name": "Friday X",
+"short_name": "Friday X",
   "description": "Retail Intelligence - Inventory Management",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0b0f16",
   "theme_color": "#0b0f16",
-  "orientation": "any"
+  "orientation": "any",
+    "icons": [
+    {
+      "src": "./icons/friday-x-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icons/friday-x-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
