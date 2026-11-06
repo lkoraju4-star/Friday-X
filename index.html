@@ -367,6 +367,9 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
   .sidebar.mobile-open{transform:none!important}
   .kpi-card{width:calc(50% - 6px)}
   .widget{grid-column:span 12!important}
+ }
+ #mobileFilterToggle {
+  display: none;
 }
  /* MOBILE APP DESIGN START */
  @media (max-width: 600px) {
@@ -413,6 +416,19 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
 
   .controlbar {
     flex-wrap: wrap;
+  }
+  
+  #mobileFilterToggle {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .controlbar.filters-collapsed > .ctl,
+  .controlbar.filters-collapsed > #btnFilters,
+  .controlbar.filters-collapsed > #btnClearFilters,
+  .controlbar.filters-collapsed > #btnExport {
+    display: none !important;
   }
 }
  /* TABLE BORDER START */
@@ -478,6 +494,9 @@ if (window.supabase && window.supabase.createClient) {
     </header>
 
     <div class="controlbar" id="controlbar">
+     <button type="button" id="mobileFilterToggle" class="btn">
+  ▲ Hide Filters
+</button>
       <div class="ctl">
         <label data-i18n="ctl.mode">Report Scope</label>
         <select id="modeSelect">
@@ -2899,6 +2918,15 @@ function wire(){
   $('#subgroupSelect').addEventListener('change',e=>{ state.quick.subgroup=e.target.value; invalidateGlobal(); renderAll(); });
   $('#itemSearch').addEventListener('input',debounce(e=>{ state.quick.search=e.target.value; invalidateGlobal(); renderAll(); },280));
   $('#btnFilters').addEventListener('click',openDrawer);
+ const mobileFilterToggle = $('#mobileFilterToggle');
+const controlbar = $('#controlbar');
+
+if (mobileFilterToggle && controlbar) {
+  mobileFilterToggle.addEventListener('click', () => {
+    const collapsed = controlbar.classList.toggle('filters-collapsed');
+    mobileFilterToggle.textContent = collapsed ? '▼ Show Filters' : '▲ Hide Filters';
+  });
+}
   $('#closeDrawer').addEventListener('click',closeDrawer);
   $('#drawerBackdrop').addEventListener('click',closeDrawer);
   $('#applyFilters').addEventListener('click',()=>{ invalidateGlobal(); renderAll(); closeDrawer(); showToast(tr('msg.filtersApplied')); });
