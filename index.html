@@ -3283,35 +3283,56 @@ const selectedRows = matches.filter(r =>
 );
 
 const branchStock = new Map();
-  selectedRows.forEach(r => {
-    const branch = String(r.branchCode || 'Unknown');
-    const old = branchStock.get(branch) || 0;
-    branchStock.set(branch, old + (Number(r.stock) || 0));
-  });
 
+selectedRows.forEach(r => {
+  const branch = String(r.branchCode || 'Unknown');
+  const old = branchStock.get(branch) || {
+    stock: 0,
+    qty: 0,
+    invoice: 0,
+    profit: 0
+  };
+
+  old.stock += Number(r.stock) || 0;
+  old.qty += Number(r.qty) || 0;
+  old.invoice += Number(r.invoice) || 0;
+  old.profit += Number(r.profit) || 0;
+
+  branchStock.set(branch, old);
+});
 result.innerHTML = `
-    <h3>Item Found</h3>
-    <p><b>Barcode:</b> ${esc(uniqueItems[0].barcode || 'Not Available')}</p>
-    <p><b>Item Code:</b> ${esc(uniqueItems[0].itemCode)}</p>
-    <p><b>Item:</b> ${esc(itemName)}</p>
-    <h4>All Branch Stock</h4>
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
+  <h3>Item Found</h3>
+  <p><b>Barcode:</b> ${esc(uniqueItems[0].barcode || 'Not Available')}</p>
+  <p><b>Item Code:</b> ${esc(uniqueItems[0].itemCode)}</p>
+  <p><b>Item:</b> ${esc(itemName)}</p>
+
+  <h4>All Branch Stock</h4>
+
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr>
+        <th>Branch</th>
+        <th>Available Stock</th>
+        <th>Sales Qty</th>
+        <th>Sales Amount (SAR)</th>
+        <th>Profit (SAR)</th>
+        <th>Profit Margin %</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${[...branchStock.entries()].map(([branch, data]) => `
         <tr>
-          <th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">Branch</th>
-          <th style="text-align:right;padding:8px;border-bottom:1px solid var(--border)">Stock</th>
+          <td>${esc(branch)}</td>
+          <td>${fmt(data.stock)}</td>
+          <td>${fmt(data.qty)}</td>
+          <td>${fmt(data.invoice)}</td>
+          <td>${fmt(data.profit)}</td>
+          <td>${data.invoice ? fmt((data.profit / data.invoice) * 100) + '%' : '0%'}</td>
         </tr>
-      </thead>
-      <tbody>
-        ${[...branchStock.entries()].map(([branch, stock]) => `
-          <tr>
-            <td style="padding:8px;border-bottom:1px solid var(--border)">${esc(branch)}</td>
-            <td style="text-align:right;padding:8px;border-bottom:1px solid var(--border)">${fmt(stock)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+      `).join('')}
+    </tbody>
+  </table>
+`;
 }
 async function closeBarcodeScanner() {
   if (barcodeScanner) {
