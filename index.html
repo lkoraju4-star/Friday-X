@@ -3299,17 +3299,51 @@ const uniqueItems = [...new Map(
 
 if (searchByName && uniqueItems.length > 1) {
   result.innerHTML = `
-    <h3>Matching Items</h3>
-    ${uniqueItems.map(item => `
-      <button class="btn" style="display:block;width:100%;margin:8px 0;text-align:left"
-        onclick="showBarcodeItem('${String(item.itemCode || '').replace(/'/g, "\\'")}')">
-        ${esc(item.itemName)} — ${esc(item.itemCode)}
-      </button>
-    `).join('')}
+    <h3>Matching Items (${uniqueItems.length})</h3>
+
+    <input
+      type="text"
+      id="barcodeItemFilter"
+      placeholder="Filter by Item Name or Item Code..."
+      style="width:100%;padding:12px;margin:10px 0;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);box-sizing:border-box"
+    >
+
+    <div id="barcodeMatchingList">
+      ${uniqueItems.map(item => `
+        <button class="btn barcode-match-item"
+          data-name="${esc(item.itemName || '').toLowerCase()}"
+          data-code="${esc(item.itemCode || '').toLowerCase()}"
+          style="display:block;width:100%;margin:8px 0;text-align:left">
+          ${esc(item.itemName)} — ${esc(item.itemCode)}
+        </button>
+      `).join('')}
+    </div>
   `;
+
+  const filterInput = document.getElementById('barcodeItemFilter');
+
+  filterInput.addEventListener('input', () => {
+    const search = filterInput.value.toLowerCase().trim();
+
+    document.querySelectorAll('.barcode-match-item').forEach(button => {
+      const name = button.dataset.name || '';
+      const code = button.dataset.code || '';
+
+      button.style.display =
+        name.includes(search) || code.includes(search)
+          ? 'block'
+          : 'none';
+    });
+  });
+
+  document.querySelectorAll('.barcode-match-item').forEach((button, index) => {
+    button.addEventListener('click', () => {
+      showBarcodeItem(uniqueItems[index].itemCode);
+    });
+  });
+
   return;
 }
-
 const selectedCode = String(uniqueItems[0].itemCode || '');
 const itemName = uniqueItems[0].itemName || 'Unknown Item';
 
