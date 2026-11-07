@@ -3498,7 +3498,9 @@ box-sizing:border-box;">
     placeholder="Enter barcode manually..."
     style="flex:1;min-width:0;padding:12px;border-radius:8px;
     border:1px solid var(--border);background:var(--bg);
-    color:var(--text);font-size:15px">
+    color:var(--text) !important;
+    -webkit-text-fill-color:var(--text);
+    font-size:15px;opacity:1">
 
   <button id="manualBarcodeSearch" class="btn primary">
     Search
