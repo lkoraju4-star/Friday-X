@@ -3353,22 +3353,38 @@ async function loadCloudDataset(){
     const rows=[];
     const pageSize=1000;
     const total=Number(upload.row_count)||0;
+    const batchSize=5;
 
-    for(let start=0;start<total;start+=pageSize){
-      const end=Math.min(start+pageSize,total)-1;
+for(let batchStart=0;batchStart<total;batchStart+=pageSize*batchSize){
 
-      const {data:page,error:pageError}=await window.halaSupabase
+  const requests=[];
+
+  for(
+    let start=batchStart;
+    start<Math.min(batchStart+pageSize*batchSize,total);
+    start+=pageSize
+  ){
+    const end=Math.min(start+pageSize,total)-1;
+
+    requests.push(
+      window.halaSupabase
         .from('sales_upload_rows')
         .select('row_number,data')
         .eq('upload_id',id)
         .order('row_number',{ascending:true})
-        .range(start,end);
+        .range(start,end)
+    );
+  }
 
-      if(pageError) throw pageError;
-      if(!page||!page.length) break;
+  const results=await Promise.all(requests);
 
-      rows.push(...page.map(r=>r.data));
-    }
+  for(const result of results){
+    if(result.error) throw result.error;
+    if(!result.data) throw new Error('Cloud rows missing');
+
+    rows.push(...result.data.map(r=>r.data));
+  }
+}
 
     if(rows.length!==total){
       throw new Error(`Expected ${total} rows, received ${rows.length}`);
