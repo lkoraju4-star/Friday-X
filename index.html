@@ -2657,6 +2657,31 @@ function renderHistory(){
   }));
 }
 
+ 
+function renderPerf(){
+  const el=$('#perfGrid');
+  if(!el) return;
+
+  const d=activeDataset();
+  const size=d?JSON.stringify(d.rows).length:0;
+
+  const cells=[
+    [tr('perf.records'),fmt(d?d.rows.length:0)],
+    [tr('perf.memory'),fmt(memo.rows.length)],
+    [tr('perf.processing'),memo.genTime.toFixed(1)+' ms'],
+    [tr('perf.filtered'),fmt(memo.rows.length)],
+    [tr('perf.render'),state.perf.lastRender.toFixed(1)+' ms'],
+    [tr('perf.charts'),Object.keys(charts).length],
+    [tr('perf.size'),bytes(size)],
+    [tr('perf.cache'),memo.key?tr('perf.cached'):tr('perf.fresh')],
+    [tr('perf.tables'),state.perf.tablesRendered]
+  ];
+
+  el.innerHTML=cells.map(([l,v])=>
+    `<div class="perf-cell"><div class="pl">${esc(l)}</div><div class="pv">${esc(v)}</div></div>`
+  ).join('');
+}
+
 
 /* ============================================================================
    18. BRANCH DROPDOWN / SUBGROUPS
