@@ -3327,9 +3327,7 @@ if (mobileFilterToggle && controlbar) {
 
 async function loadCloudDataset(){
   try{
-
-    // Load all completed Excel upload records
-    const { data, error } = await window.halaSupabase
+    const {data,error}=await window.halaSupabase
       .from('sales_uploads')
       .select('*')
       .eq('status','complete')
@@ -3337,23 +3335,90 @@ async function loadCloudDataset(){
 
     if(error) throw error;
 
-    // Store history metadata only
     state.cloudHistory=data||[];
-
-    // Refresh Upload History display
     renderHistory();
 
+    if(!state.cloudHistory.length){
+      state.activeId=null;
+      await refreshDatasets();
+      renderAll();
+      return;
+    }
+
+    const upload=state.cloudHistory[0];
+    const id=upload.id;
+
+    if(state.activeId===id) return;
+
+    const rows=[];
+    const pageSize=1000;
+    const total=Number(upload.row_count)||0;
+
+    for(let start=0;start<total;start+=pageSize){
+      const end=Math.min(start+pageSize,total)-1;
+
+      const {data:page,error:pageError}=await window.halaSupabase
+        .from('sales_upload_rows')
+        .select('row_number,data')
+        .eq('upload_id',id)
+        .order('row_number',{ascending:true})
+        .range(start,end);
+
+      if(pageError) throw pageError;
+      if(!page||!page.length) break;
+
+      rows.push(...page.map(r=>r.data));
+    }
+
+    if(rows.length!==total){
+      throw new Error(`Expected ${total} rows, received ${rows.length}`);
+    }
+
+    const ds={
+      id:upload.id,
+      fileName:upload.file_name,
+      uploadDate:new Date(upload.created_at||Date.now()).getTime(),
+      periodDays:upload.period_days||30,
+      dataType:upload.data_type||'Daily Sales Data',
+      branchCount:upload.branch_count||0,
+      productCount:upload.product_count||0,
+      totalSales:Number(upload.total_sales)||0,
+      totalProfit:Number(upload.total_profit)||0,
+      status:'OK',
+      rows
+    };
+
+    await dbPut(ds);
+
+    state.activeId=id;
+    state.periodDays=ds.periodDays;
+    state.dataType=ds.dataType;
+    state.mode='all';
+    state.branch='';
+    state.branches=[];
+    state.filters={};
+    state.quick={subgroup:'',search:''};
+
+    $('#modeSelect').value='all';
+
+    Object.keys(tableState).forEach(k=>{
+      tableState[k].sig='';
+    });
+
+    await refreshDatasets();
+    renderAll();
+
+    showToast('Latest Excel synchronized successfully');
+
   }catch(err){
-    console.error('Cloud history load failed:',err);
+    console.error('Cloud auto-sync failed:',err);
   }
 }
-
+ 
 function startCloudRealtime(){
 
   window.halaSupabase
     .channel('hala-live-updates')
-
-    // Refresh history when an upload is created, completed or deleted
     .on(
       'postgres_changes',
       {
@@ -3365,10 +3430,8 @@ function startCloudRealtime(){
         loadCloudDataset();
       }
     )
-
     .subscribe();
 }
-
 
 /* ============================================================================
    BARCODE CAMERA SCANNER
