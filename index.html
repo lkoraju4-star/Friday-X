@@ -3438,7 +3438,7 @@ result.innerHTML = `
       </tr>
     </thead>
     <tbody>
-      ${[...branchStock.entries()].map(([branch, data]) => `
+      ${[...branchStock.entries()].sort(([a], [b]) => Number(a) - Number(b)).map(([branch, data]) => `
         <tr>
           <td>${esc(branch)}</td>
           <td>${fmt(data.stock)}</td>
