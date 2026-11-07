@@ -1091,7 +1091,7 @@ const DT_KEY={'Daily Sales Data':'dt.daily','Cumulative Sales Data':'dt.cumulati
    ============================================================================ */
 const state={
   lang:'en', theme:'dark', sidebarOpen:true,
-  datasets:[], activeId:null, periodDays:30, dataType:'Daily Sales Data',
+  datasets:[], cloudHistory:[], activeId:null, periodDays:30, dataType:'Daily Sales Data',
   mode:'all', branch:'', branches:[],
   filters:{}, quick:{subgroup:'',search:''},
   view:'dashboard',
@@ -1369,7 +1369,7 @@ async function refreshDatasets(){
   state.datasets=await dbAll();
   state.datasets.sort((a,b)=>(b.uploadDate||0)-(a.uploadDate||0));
   if(state.activeId && !state.datasets.find(d=>d.id===state.activeId)) state.activeId=null;
-  if(!state.activeId && state.datasets.length) state.activeId=state.datasets[0].id;
+  
   if(state.activeId){
     const d=activeDataset();
     state.periodDays=d.periodDays||30; state.dataType=d.dataType||'Daily Sales Data';
@@ -2490,24 +2490,30 @@ function renderBranchChart(){
 /* ============================================================================
    17. HISTORY / PERF
    ============================================================================ */
+
 function renderHistory(){
-  const list=$('#historyList'); if(!list) return;
-  if(!state.datasets.length){
+  const list=$('#historyList');
+  if(!list) return;
+
+  const uploads=state.cloudHistory||[];
+
+  if(!uploads.length){
     list.innerHTML=`<div class="empty"><div class="big">◷</div><h3>${esc(tr('hist.empty.title'))}</h3><p>${esc(tr('hist.empty.desc'))}</p></div>`;
     return;
   }
-  list.innerHTML=state.datasets.map(d=>`
+
+  list.innerHTML=uploads.map(d=>`
     <div class="hist-item glow">
-      <div class="hname">${esc(d.fileName)}</div>
+      <div class="hname">${esc(d.file_name||'Untitled')}</div>
       <div class="hist-meta">
-        <span>${esc(tr('hist.uploaded'))}: <b>${new Date(d.uploadDate).toLocaleString()}</b></span>
-        <span>${esc(tr('hist.period'))}: <b>${esc(trf('hist.days',{n:d.periodDays}))}</b></span>
-        <span>${esc(tr('hist.type'))}: <b>${esc(dataTypeLabel(d.dataType))}</b></span>
-        <span>${esc(tr('hist.branches'))}: <b>${d.branchCount}</b></span>
-        <span>${esc(tr('hist.products'))}: <b>${d.productCount}</b></span>
-        <span>${esc(tr('hist.sales'))}: <b>${fmtCur(d.totalSales)}</b></span>
-        <span>${esc(tr('hist.profit'))}: <b>${fmtCur(d.totalProfit)}</b></span>
-        <span>${esc(tr('hist.status'))}: <b class="${d.status==='OK'?'pos':'neg'}">${esc(d.status==='OK'?tr('hist.ok'):d.status)}</b></span>
+        <span>${esc(tr('hist.uploaded'))}: <b>${new Date(d.created_at||Date.now()).toLocaleString()}</b></span>
+        <span>${esc(tr('hist.period'))}: <b>${esc(trf('hist.days',{n:d.period_days||30}))}</b></span>
+        <span>${esc(tr('hist.type'))}: <b>${esc(dataTypeLabel(d.data_type||'Daily Sales Data'))}</b></span>
+        <span>${esc(tr('hist.branches'))}: <b>${d.branch_count||0}</b></span>
+        <span>${esc(tr('hist.products'))}: <b>${d.product_count||0}</b></span>
+        <span>${esc(tr('hist.sales'))}: <b>${fmtCur(Number(d.total_sales)||0)}</b></span>
+        <span>${esc(tr('hist.profit'))}: <b>${fmtCur(Number(d.total_profit)||0)}</b></span>
+        <span>${esc(tr('hist.status'))}: <b class="pos">${esc(tr('hist.ok'))}</b></span>
       </div>
       <div class="flex">
         <button class="btn sm glow" data-load="${d.id}">${esc(tr('btn.load'))}</button>
@@ -2515,39 +2521,142 @@ function renderHistory(){
       </div>
     </div>`).join('');
 
+  // LOAD selected Excel from cloud
   list.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',async()=>{
-    state.activeId=b.dataset.load;
-    const d=activeDataset();
-    if(d){ state.periodDays=d.periodDays; state.dataType=d.dataType; }
-    state.mode='all'; state.branch=''; state.branches=[];
-    $('#modeSelect').value='all';
-    await refreshDatasets(); renderAll();
+    const id=b.dataset.load;
+    const upload=uploads.find(d=>d.id===id);
+    if(!upload) return;
+
+    b.disabled=true;
+    b.textContent='Loading...';
+
+    try{
+      const rows=[];
+      const pageSize=1000;
+      const total=Number(upload.row_count)||0;
+
+      for(let start=0;start<total;start+=pageSize){
+        const end=Math.min(start+pageSize,total)-1;
+
+        const {data:page,error:pageError}=await window.halaSupabase
+          .from('sales_upload_rows')
+          .select('row_number,data')
+          .eq('upload_id',id)
+          .order('row_number',{ascending:true})
+          .range(start,end);
+
+        if(pageError) throw pageError;
+        if(!page||!page.length) break;
+
+        rows.push(...page.map(r=>r.data));
+      }
+
+      if(rows.length!==total){
+        throw new Error(`Expected ${total} rows, received ${rows.length}`);
+      }
+
+      const ds={
+        id:upload.id,
+        fileName:upload.file_name,
+        uploadDate:new Date(upload.created_at||Date.now()).getTime(),
+        periodDays:upload.period_days||30,
+        dataType:upload.data_type||'Daily Sales Data',
+        branchCount:upload.branch_count||0,
+        productCount:upload.product_count||0,
+        totalSales:Number(upload.total_sales)||0,
+        totalProfit:Number(upload.total_profit)||0,
+        status:'OK',
+        rows
+      };
+
+      await dbPut(ds);
+
+      state.activeId=id;
+      state.periodDays=ds.periodDays;
+      state.dataType=ds.dataType;
+      state.mode='all';
+      state.branch='';
+      state.branches=[];
+      state.filters={};
+      state.quick={subgroup:'',search:''};
+
+      $('#modeSelect').value='all';
+
+      Object.keys(tableState).forEach(k=>{
+        tableState[k].sig='';
+      });
+
+      await refreshDatasets();
+      renderAll();
+
+      showToast('Selected Excel loaded successfully');
+
+    }catch(err){
+      console.error('Cloud Excel load failed:',err);
+      alert('Load failed: '+err.message);
+      b.disabled=false;
+      b.textContent=tr('btn.load');
+    }
   }));
+
+  // DELETE selected Excel from cloud
   list.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',async()=>{
+    const id=b.dataset.del;
+
     if(!confirm(tr('msg.confirmDelete'))) return;
-    await dbDelete(b.dataset.del);
-    if(state.activeId===b.dataset.del) state.activeId=null;
-    await refreshDatasets(); renderAll();
+
+    b.disabled=true;
+
+    try{
+      const {data:authData,error:sessionError}=
+        await window.halaSupabase.auth.getSession();
+
+      if(sessionError) throw sessionError;
+
+      if(!authData.session){
+        const email=prompt('Admin email:');
+        const password=prompt('Admin password:');
+
+        if(!email||!password){
+          throw new Error('Admin login cancelled');
+        }
+
+        const {error:loginError}=
+          await window.halaSupabase.auth.signInWithPassword({
+            email,
+            password
+          });
+
+        if(loginError) throw loginError;
+      }
+
+      const {error:deleteError}=await window.halaSupabase
+        .from('sales_uploads')
+        .delete()
+        .eq('id',id);
+
+      if(deleteError) throw deleteError;
+
+      await dbDelete(id);
+
+      if(state.activeId===id){
+        state.activeId=null;
+      }
+
+      await loadCloudDataset();
+      await refreshDatasets();
+      renderAll();
+
+      showToast('Selected Excel deleted successfully');
+
+    }catch(err){
+      console.error('Cloud Excel delete failed:',err);
+      alert('Delete failed: '+err.message);
+      b.disabled=false;
+    }
   }));
 }
 
-function renderPerf(){
-  const el=$('#perfGrid'); if(!el) return;
-  const d=activeDataset();
-  const size = d? JSON.stringify(d.rows).length : 0;
-  const cells=[
-    [tr('perf.records'), fmt(d?d.rows.length:0)],
-    [tr('perf.memory'), fmt(memo.rows.length)],
-    [tr('perf.processing'), memo.genTime.toFixed(1)+' ms'],
-    [tr('perf.filtered'), fmt(memo.rows.length)],
-    [tr('perf.render'), state.perf.lastRender.toFixed(1)+' ms'],
-    [tr('perf.charts'), Object.keys(charts).length],
-    [tr('perf.size'), bytes(size)],
-    [tr('perf.cache'), memo.key? tr('perf.cached'):tr('perf.fresh')],
-    [tr('perf.tables'), state.perf.tablesRendered]
-  ];
-  el.innerHTML=cells.map(([l,v])=>`<div class="perf-cell"><div class="pl">${esc(l)}</div><div class="pv">${esc(v)}</div></div>`).join('');
-}
 
 /* ============================================================================
    18. BRANCH DROPDOWN / SUBGROUPS
@@ -2867,19 +2976,7 @@ async function handleUpload(){
 
     uploadCompleted=true;
 
-    // Remove older cloud uploads only after verification
-    try{
-      const { error: deleteError } =
-        await window.halaSupabase
-          .from('sales_uploads')
-          .delete()
-          .neq('id',uploadId);
-
-      if(deleteError) throw deleteError;
-    }catch(deleteError){
-      console.error('Old cloud upload cleanup failed:',deleteError);
-    }
-
+   
     // Save completed dataset locally
     const ds={
       id:uploadId,
@@ -2896,19 +2993,6 @@ async function handleUpload(){
     };
 
     await dbPut(ds);
-
-    // Remove older local datasets
-    try{
-      const localDatasets=await dbAll();
-
-      for(const old of localDatasets){
-        if(old.id!==uploadId){
-          await dbDelete(old.id);
-        }
-      }
-    }catch(localCleanupError){
-      console.error('Local cleanup failed:',localCleanupError);
-    }
 
     state.activeId=uploadId;
     state.periodDays=days;
@@ -3210,101 +3294,31 @@ if (mobileFilterToggle && controlbar) {
   },{passive:true});
 }
 
+
 /* ============================================================================
-   SUPABASE CLOUD LOAD + LIVE REFRESH
+   SUPABASE CLOUD HISTORY + LIVE REFRESH
    ============================================================================ */
 
 async function loadCloudDataset(){
   try{
 
-    // 1. Find latest completed upload
-    const { data: upload, error: uploadError } =
-      await window.halaSupabase
-        .from('sales_uploads')
-        .select('*')
-        .eq('status','complete')
-        .order('created_at',{ascending:false})
-        .limit(1)
-        .maybeSingle();
+    // Load all completed Excel upload records
+    const { data, error } = await window.halaSupabase
+      .from('sales_uploads')
+      .select('*')
+      .eq('status','complete')
+      .order('created_at',{ascending:false});
 
-    if(uploadError) throw uploadError;
+    if(error) throw error;
 
-    // 2. Load new upload in pages of 1000 rows
-    if(upload){
+    // Store history metadata only
+    state.cloudHistory=data||[];
 
-      const rows=[];
-      const pageSize=1000;
-
-      for(let start=0;start<Number(upload.row_count);start+=pageSize){
-
-        const end=Math.min(start+pageSize,Number(upload.row_count))-1;
-
-        const { data: page, error: pageError } =
-          await window.halaSupabase
-            .from('sales_upload_rows')
-            .select('row_number,data')
-            .eq('upload_id',upload.id)
-            .order('row_number',{ascending:true})
-            .range(start,end);
-
-        if(pageError) throw pageError;
-
-        if(!page || !page.length) break;
-
-        rows.push(...page.map(r=>r.data));
-      }
-
-      // Verify downloaded rows
-      if(rows.length!==Number(upload.row_count)){
-        throw new Error(
-          `Download verification failed. Expected ${upload.row_count}, received ${rows.length}`
-        );
-      }
-
-      const ds={
-        id:upload.id,
-        fileName:upload.file_name,
-        uploadDate:new Date(upload.created_at||Date.now()).getTime(),
-        periodDays:upload.period_days||30,
-        dataType:upload.data_type||'Daily Sales Data',
-        branchCount:upload.branch_count||0,
-        productCount:upload.product_count||0,
-        totalSales:Number(upload.total_sales)||0,
-        totalProfit:Number(upload.total_profit)||0,
-        status:'OK',
-        rows
-      };
-
-      await dbPut(ds);
-      state.activeId=ds.id;
-      await refreshDatasets();
-      renderAll();
-
-      return;
-    }
-
-    // 3. Fallback to old table if no new upload exists
-    const { data: oldData, error: oldError } =
-      await window.halaSupabase
-        .from('sales_records')
-        .select('data')
-        .order('created_at',{ascending:false})
-        .limit(1)
-        .maybeSingle();
-
-    if(oldError) throw oldError;
-
-    const oldDs=oldData?.data;
-
-    if(oldDs?.rows?.length){
-      await dbPut(oldDs);
-      state.activeId=oldDs.id;
-      await refreshDatasets();
-      renderAll();
-    }
+    // Refresh Upload History display
+    renderHistory();
 
   }catch(err){
-    console.error('Cloud load failed:',err);
+    console.error('Cloud history load failed:',err);
   }
 }
 
@@ -3313,34 +3327,22 @@ function startCloudRealtime(){
   window.halaSupabase
     .channel('hala-live-updates')
 
-    // New upload becomes visible when status changes to complete
+    // Refresh history when an upload is created, completed or deleted
     .on(
       'postgres_changes',
       {
-        event:'UPDATE',
+        event:'*',
         schema:'public',
         table:'sales_uploads'
       },
-      payload=>{
-        if(payload.new?.status==='complete'){
-          loadCloudDataset();
-        }
+      ()=>{
+        loadCloudDataset();
       }
-    )
-
-    // Keep compatibility with old uploads
-    .on(
-      'postgres_changes',
-      {
-        event:'INSERT',
-        schema:'public',
-        table:'sales_records'
-      },
-      ()=>loadCloudDataset()
     )
 
     .subscribe();
 }
+
 
 /* ============================================================================
    BARCODE CAMERA SCANNER
