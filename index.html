@@ -2728,19 +2728,26 @@ function closeUpload(){ $('#modalBackdrop').classList.remove('open'); $('#upload
 
 async function handleUpload(){
   if(!pendingFile){ alert(tr('msg.selectFile')); return; }
+
   let days=selectedDays;
   if(days==='custom'){
     days=Number($('#customDays').value);
     if(!days||days<1){ alert(tr('msg.invalidDays')); return; }
   }
+
   const dataType=$('#dataTypeSelect').value;
   const btn=$('#confirmUpload');
   const label=tr('up.process');
-  btn.disabled=true; btn.textContent=tr('up.processing');
+  let uploadId=null;
+  let uploadCompleted=false;
+
+  btn.disabled=true;
+  btn.textContent=tr('up.processing');
 
   try{
     const buf=await pendingFile.arrayBuffer();
     let rows=[], viaWorker=false;
+
     try{
       const aoa=await workerParse(buf.slice(0));
       rows=aoaToRows(aoa);
@@ -2748,34 +2755,34 @@ async function handleUpload(){
     }catch(err){
       rows=parseOnMainThread(buf);
     }
-    if(!rows.length){ alert(tr('msg.noRows')); return; }
+
+    if(!rows.length){
+      alert(tr('msg.noRows'));
+      return;
+    }
 
     const branches=new Set(), products=new Set();
     let totalSales=0,totalProfit=0;
+
     for(let i=0;i<rows.length;i++){
       const r=rows[i];
-      branches.add(r.branchCode); products.add(r.itemCode);
-      totalSales+=r.invoice; totalProfit+=r.profit;
+      branches.add(r.branchCode);
+      products.add(r.itemCode);
+      totalSales+=Number(r.invoice)||0;
+      totalProfit+=Number(r.profit)||0;
     }
 
-    const ds={
-      id:'ds_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-      fileName:pendingFile.name, uploadDate:Date.now(),
-      periodDays:days, dataType,
-      branchCount:branches.size, productCount:products.size,
-      totalSales, totalProfit, status:'OK', rows
-    };
-        // Supabase Cloud Save
+    // Admin login
     const { data: authData, error: sessionError } =
       await window.halaSupabase.auth.getSession();
 
-    if (sessionError) throw sessionError;
+    if(sessionError) throw sessionError;
 
-    if (!authData.session) {
-      const email = prompt('Admin email:');
-      const password = prompt('Admin password:');
+    if(!authData.session){
+      const email=prompt('Admin email:');
+      const password=prompt('Admin password:');
 
-      if (!email || !password) {
+      if(!email||!password){
         throw new Error('Admin login cancelled');
       }
 
@@ -2785,37 +2792,169 @@ async function handleUpload(){
           password
         });
 
-      if (loginError) throw loginError;
-      if (!loginData.session) throw new Error('Admin login failed');
+      if(loginError) throw loginError;
+      if(!loginData.session) throw new Error('Admin login failed');
     }
 
-    const { error: cloudError } = await window.halaSupabase
-      .from('sales_records')
-      .insert({
-        data: {
-          ...ds,
-          records: rows.length,
-          branches: branches.size,
-          products: products.size,
-          valid: true
-        }
-      });
+    // Create new upload record
+    const { data: uploadData, error: createError } =
+      await window.halaSupabase
+        .from('sales_uploads')
+        .insert({
+          file_name:pendingFile.name,
+          period_days:Number(days),
+          data_type:dataType,
+          row_count:rows.length,
+          branch_count:branches.size,
+          product_count:products.size,
+          total_sales:totalSales,
+          total_profit:totalProfit,
+          status:'uploading'
+        })
+        .select('id')
+        .single();
 
-    if (cloudError) throw cloudError;
+    if(createError) throw createError;
+
+    uploadId=uploadData.id;
+
+    // Upload rows in batches of 1000
+    const batchSize=1000;
+
+    for(let start=0;start<rows.length;start+=batchSize){
+      const end=Math.min(start+batchSize,rows.length);
+
+      const batch=rows.slice(start,end).map((row,index)=>({
+        upload_id:uploadId,
+        row_number:start+index+1,
+        data:row
+      }));
+
+      const { error: batchError } =
+        await window.halaSupabase
+          .from('sales_upload_rows')
+          .insert(batch);
+
+      if(batchError) throw batchError;
+
+      btn.textContent=
+        `Uploading ${end.toLocaleString()} / ${rows.length.toLocaleString()}`;
+    }
+
+    // Verify uploaded row count
+    const { count, error: countError } =
+      await window.halaSupabase
+        .from('sales_upload_rows')
+        .select('row_number',{count:'exact',head:true})
+        .eq('upload_id',uploadId);
+
+    if(countError) throw countError;
+
+    if(count!==rows.length){
+      throw new Error(
+        `Upload verification failed. Expected ${rows.length}, received ${count}`
+      );
+    }
+
+    // Mark new dataset complete
+    const { error: completeError } =
+      await window.halaSupabase
+        .from('sales_uploads')
+        .update({status:'complete'})
+        .eq('id',uploadId);
+
+    if(completeError) throw completeError;
+
+    uploadCompleted=true;
+
+    // Remove older cloud uploads only after verification
+    try{
+      const { error: deleteError } =
+        await window.halaSupabase
+          .from('sales_uploads')
+          .delete()
+          .neq('id',uploadId);
+
+      if(deleteError) throw deleteError;
+    }catch(deleteError){
+      console.error('Old cloud upload cleanup failed:',deleteError);
+    }
+
+    // Save completed dataset locally
+    const ds={
+      id:uploadId,
+      fileName:pendingFile.name,
+      uploadDate:Date.now(),
+      periodDays:days,
+      dataType,
+      branchCount:branches.size,
+      productCount:products.size,
+      totalSales,
+      totalProfit,
+      status:'OK',
+      rows
+    };
+
     await dbPut(ds);
-    state.activeId=ds.id; state.periodDays=days; state.dataType=dataType;
-    state.mode='all'; state.branch=''; state.branches=[];
-    state.filters={}; state.quick={subgroup:'',search:''};
+
+    // Remove older local datasets
+    try{
+      const localDatasets=await dbAll();
+
+      for(const old of localDatasets){
+        if(old.id!==uploadId){
+          await dbDelete(old.id);
+        }
+      }
+    }catch(localCleanupError){
+      console.error('Local cleanup failed:',localCleanupError);
+    }
+
+    state.activeId=uploadId;
+    state.periodDays=days;
+    state.dataType=dataType;
+    state.mode='all';
+    state.branch='';
+    state.branches=[];
+    state.filters={};
+    state.quick={subgroup:'',search:''};
+
     $('#modeSelect').value='all';
-    Object.keys(tableState).forEach(k=>{ tableState[k].sig=''; });
+
+    Object.keys(tableState).forEach(k=>{
+      tableState[k].sig='';
+    });
+
     await refreshDatasets();
-    closeUpload(); renderAll();
-    showToast(trf('msg.loaded',{rows:fmt(rows.length),days})+' • '+(viaWorker?tr('msg.parsedWorker'):tr('msg.parsedMain')));
+    closeUpload();
+    renderAll();
+
+    showToast(
+      trf('msg.loaded',{rows:fmt(rows.length),days})+
+      ' • '+
+      (viaWorker?tr('msg.parsedWorker'):tr('msg.parsedMain'))
+    );
+
   }catch(err){
     console.error(err);
+
+    // Remove incomplete upload only
+    if(uploadId && !uploadCompleted){
+      try{
+        await window.halaSupabase
+          .from('sales_uploads')
+          .delete()
+          .eq('id',uploadId);
+      }catch(cleanupError){
+        console.error('Incomplete upload cleanup failed:',cleanupError);
+      }
+    }
+
     alert(trf('msg.failed',{e:err.message}));
+
   }finally{
-    btn.disabled=false; btn.textContent=label;
+    btn.disabled=false;
+    btn.textContent=label;
   }
 }
 
@@ -3077,40 +3216,129 @@ if (mobileFilterToggle && controlbar) {
 
 async function loadCloudDataset(){
   try{
-    const { data, error } = await window.halaSupabase
-      .from('sales_records')
-      .select('data')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
-    if(error) throw error;
+    // 1. Find latest completed upload
+    const { data: upload, error: uploadError } =
+      await window.halaSupabase
+        .from('sales_uploads')
+        .select('*')
+        .eq('status','complete')
+        .order('created_at',{ascending:false})
+        .limit(1)
+        .maybeSingle();
 
-    const ds = data?.data;
-    if(!ds?.rows?.length) return;
+    if(uploadError) throw uploadError;
 
-    await dbPut(ds);
-    state.activeId = ds.id;
-    await refreshDatasets();
-    renderAll();
+    // 2. Load new upload in pages of 1000 rows
+    if(upload){
+
+      const rows=[];
+      const pageSize=1000;
+
+      for(let start=0;start<Number(upload.row_count);start+=pageSize){
+
+        const end=Math.min(start+pageSize,Number(upload.row_count))-1;
+
+        const { data: page, error: pageError } =
+          await window.halaSupabase
+            .from('sales_upload_rows')
+            .select('row_number,data')
+            .eq('upload_id',upload.id)
+            .order('row_number',{ascending:true})
+            .range(start,end);
+
+        if(pageError) throw pageError;
+
+        if(!page || !page.length) break;
+
+        rows.push(...page.map(r=>r.data));
+      }
+
+      // Verify downloaded rows
+      if(rows.length!==Number(upload.row_count)){
+        throw new Error(
+          `Download verification failed. Expected ${upload.row_count}, received ${rows.length}`
+        );
+      }
+
+      const ds={
+        id:upload.id,
+        fileName:upload.file_name,
+        uploadDate:new Date(upload.created_at||Date.now()).getTime(),
+        periodDays:upload.period_days||30,
+        dataType:upload.data_type||'Daily Sales Data',
+        branchCount:upload.branch_count||0,
+        productCount:upload.product_count||0,
+        totalSales:Number(upload.total_sales)||0,
+        totalProfit:Number(upload.total_profit)||0,
+        status:'OK',
+        rows
+      };
+
+      await dbPut(ds);
+      state.activeId=ds.id;
+      await refreshDatasets();
+      renderAll();
+
+      return;
+    }
+
+    // 3. Fallback to old table if no new upload exists
+    const { data: oldData, error: oldError } =
+      await window.halaSupabase
+        .from('sales_records')
+        .select('data')
+        .order('created_at',{ascending:false})
+        .limit(1)
+        .maybeSingle();
+
+    if(oldError) throw oldError;
+
+    const oldDs=oldData?.data;
+
+    if(oldDs?.rows?.length){
+      await dbPut(oldDs);
+      state.activeId=oldDs.id;
+      await refreshDatasets();
+      renderAll();
+    }
 
   }catch(err){
-    console.error('Cloud load failed:', err);
+    console.error('Cloud load failed:',err);
   }
 }
 
 function startCloudRealtime(){
+
   window.halaSupabase
     .channel('hala-live-updates')
+
+    // New upload becomes visible when status changes to complete
     .on(
       'postgres_changes',
       {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'sales_records'
+        event:'UPDATE',
+        schema:'public',
+        table:'sales_uploads'
       },
-      () => loadCloudDataset()
+      payload=>{
+        if(payload.new?.status==='complete'){
+          loadCloudDataset();
+        }
+      }
     )
+
+    // Keep compatibility with old uploads
+    .on(
+      'postgres_changes',
+      {
+        event:'INSERT',
+        schema:'public',
+        table:'sales_records'
+      },
+      ()=>loadCloudDataset()
+    )
+
     .subscribe();
 }
 
