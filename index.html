@@ -2504,7 +2504,22 @@ function renderHistory(){
 
   list.innerHTML=uploads.map(d=>`
     <div class="hist-item glow">
-      <div class="hname">${esc(d.file_name||'Untitled')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+  <div class="hname">${esc(d.file_name||'Untitled')}</div>
+
+  <span style="
+    padding:6px 13px;
+    border-radius:7px;
+    font-size:12px;
+    font-weight:bold;
+    letter-spacing:.5px;
+    color:${state.activeId===d.id?'#22c55e':'#94a3b8'};
+    background:${state.activeId===d.id?'rgba(34,197,94,.12)':'rgba(148,163,184,.12)'};
+    border:1px solid ${state.activeId===d.id?'rgba(34,197,94,.35)':'rgba(148,163,184,.3)'};
+  ">
+    ${state.activeId===d.id?'ACTIVE':'INACTIVE'}
+  </span>
+</div>
       <div class="hist-meta">
         <span>${esc(tr('hist.uploaded'))}: <b>${new Date(d.created_at||Date.now()).toLocaleString()}</b></span>
         <span>${esc(tr('hist.period'))}: <b>${esc(trf('hist.days',{n:d.period_days||30}))}</b></span>
