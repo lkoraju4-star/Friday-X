@@ -462,6 +462,65 @@ input[type=file]::file-selector-button{background:var(--accent);color:#fff;borde
 
 /* TABLE BORDER END */
  
+/* FRIDAY X BLUE NEON HELLO ANIMATION */
+
+#fxWelcomeOverlay {
+  position:fixed;
+  inset:0;
+  z-index:999999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(5,10,20,0.28);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+  animation:fxOverlayOut 0.8s ease 3.2s forwards;
+}
+
+.fx-welcome-glass {
+  padding:35px 55px;
+  text-align:center;
+  border:1px solid rgba(100,190,255,0.45);
+  border-radius:24px;
+  background:rgba(15,35,65,0.35);
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  box-shadow:0 0 35px rgba(0,145,255,0.25),
+             inset 0 0 25px rgba(100,190,255,0.12);
+  animation:fxHelloIn 0.9s ease both,
+            fxHelloGlow 1.8s ease-in-out 0.9s infinite alternate;
+}
+
+.fx-welcome-text {
+  color:#8edcff;
+  font-size:clamp(42px,9vw,76px);
+  font-weight:800;
+  letter-spacing:8px;
+  text-shadow:0 0 10px #29aaff,
+              0 0 25px #008cff,
+              0 0 45px #0077ff;
+}
+
+.fx-welcome-subtitle {
+  margin-top:12px;
+  color:#ffffff;
+  font-size:12px;
+  letter-spacing:4px;
+}
+
+@keyframes fxHelloIn {
+  from {opacity:0;transform:scale(0.65) translateY(20px);}
+  to {opacity:1;transform:scale(1) translateY(0);}
+}
+
+@keyframes fxHelloGlow {
+  from {box-shadow:0 0 20px rgba(0,145,255,0.2);}
+  to {box-shadow:0 0 50px rgba(0,145,255,0.55);}
+}
+
+@keyframes fxOverlayOut {
+  to {opacity:0;visibility:hidden;pointer-events:none;}
+}
 </style>
  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
@@ -778,6 +837,13 @@ if (window.supabase && window.supabase.createClient) {
     </div><!-- /views -->
   </div><!-- /main -->
 </div><!-- /app -->
+ <!-- FRIDAY X WELCOME ANIMATION -->
+<div id="fxWelcomeOverlay">
+  <div class="fx-welcome-glass">
+    <div class="fx-welcome-text">HELLO</div>
+    <div class="fx-welcome-subtitle">WELCOME TO FRIDAY X</div>
+  </div>
+</div>
 
 <!-- ================= GLOBAL FILTER DRAWER ================= -->
 <div class="backdrop" id="drawerBackdrop"></div>
