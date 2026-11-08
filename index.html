@@ -2495,7 +2495,12 @@ function renderHistory(){
   const list=$('#historyList');
   if(!list) return;
 
-  const uploads=state.cloudHistory||[];
+  const uploads=[...(state.cloudHistory||[])];
+
+uploads.sort((a,b)=>
+  (b.id===state.activeId?1:0) -
+  (a.id===state.activeId?1:0)
+);
 
   if(!uploads.length){
     list.innerHTML=`<div class="empty"><div class="big">◷</div><h3>${esc(tr('hist.empty.title'))}</h3><p>${esc(tr('hist.empty.desc'))}</p></div>`;
