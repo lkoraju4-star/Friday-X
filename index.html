@@ -3527,11 +3527,20 @@ box-sizing:border-box;">
   </button>
 </div>
 <div style="display:flex;gap:8px;margin:12px 0">
-  <input id="itemNameSearchInput" type="text"
-    placeholder="Search item by name..."
-    style="flex:1;min-width:0;padding:12px;border-radius:8px;
-    border:1px solid var(--border);background:var(--bg);
-    color:var(--text);font-size:15px">
+  <div style="flex:1;min-width:0;position:relative">
+    <input id="itemNameSearchInput" type="text"
+      placeholder="Search item by name..."
+      style="width:100%;box-sizing:border-box;padding:12px 38px 12px 12px;
+      border-radius:8px;border:1px solid var(--border);
+      background:var(--bg);color:var(--text);font-size:15px">
+
+    <button type="button"
+      onclick="document.getElementById('itemNameSearchInput').value=''"
+      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);
+      background:none;border:none;color:var(--text);font-size:20px;cursor:pointer">
+      ×
+    </button>
+  </div>
 
   <button id="itemNameSearchBtn" class="btn primary">
     Search
