@@ -4839,7 +4839,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
  <audio id="fxStartupMusic"
-src="./u_f2xdbvliwl-oud-and-nigh-397424%20%28mp3cut.net%29.mp3"
+src="https://lkoraju4-star.github.io/HALA/u_f2xdbvliwl-oud-and-nigh-397424%20%28mp3cut.net%29.mp3"
 preload="auto"></audio>
 
 <script>
@@ -4847,35 +4847,53 @@ preload="auto"></audio>
   const audio = document.getElementById('fxStartupMusic');
   if (!audio) return;
 
-  audio.volume = 0.4;
+  const targetVolume = 0.4;
+  const fadeSeconds = 3;
+  const totalSeconds = 10;
   let started = false;
-  let timer;
+  let fadeTimer = null;
 
-    function playIntro() {
+  function playIntro() {
     if (started) return;
 
-    started = true;
+    audio.pause();
     audio.currentTime = 0;
+    audio.volume = 0;
 
-    const playPromise = audio.play();
+    audio.play().then(() => {
+      started = true;
+      const startTime = Date.now();
 
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        setTimeout(() => {
+      fadeTimer = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+
+        if (elapsed < fadeSeconds) {
+          audio.volume = targetVolume * elapsed / fadeSeconds;
+        } else if (elapsed < totalSeconds - fadeSeconds) {
+          audio.volume = targetVolume;
+        } else {
+          audio.volume = Math.max(0, targetVolume * (totalSeconds - elapsed) / fadeSeconds);
+        }
+
+        if (elapsed >= totalSeconds) {
+          clearInterval(fadeTimer);
           audio.pause();
           audio.currentTime = 0;
-        }, 10000);
-      }).catch(() => {
-        started = false;
-      });
-    }
+          audio.volume = targetVolume;
+        }
+      }, 50);
+
+      window.removeEventListener('load', playIntro);
+      document.removeEventListener('click', playIntro);
+      document.removeEventListener('keydown', playIntro);
+      document.removeEventListener('touchstart', playIntro);
+    }).catch(() => {});
   }
 
-  document.addEventListener('click', playIntro, { once: true });
-  document.addEventListener('keydown', playIntro, { once: true });
-  document.addEventListener('touchstart', playIntro, { once: true });
-
-  window.addEventListener('load', playIntro, { once: true });
+  window.addEventListener('load', playIntro);
+  document.addEventListener('click', playIntro);
+  document.addEventListener('keydown', playIntro);
+  document.addEventListener('touchstart', playIntro);
 })();
 </script>
 </body>
