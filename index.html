@@ -3514,13 +3514,23 @@ box-sizing:border-box;">
       </div>
       <div id="barcodeReader" style="width:100%;margin:15px 0"></div>
       <div style="display:flex;gap:8px;margin:12px 0">
-  <input id="manualBarcodeInput" type="text"
-    placeholder="Enter barcode manually..."
-    style="flex:1;min-width:0;padding:12px;border-radius:8px;
-    border:1px solid var(--border);background:var(--bg);
-    color:var(--text) !important;
-    -webkit-text-fill-color:var(--text);
-    font-size:15px;opacity:1">
+  <div style="flex:1;min-width:0;position:relative">
+    <input id="manualBarcodeInput" type="text"
+      placeholder="Enter barcode manually..."
+      style="width:100%;box-sizing:border-box;padding:12px 38px 12px 12px;
+      border-radius:8px;border:1px solid var(--border);
+      background:var(--bg);color:var(--text) !important;
+      -webkit-text-fill-color:var(--text);
+      font-size:15px;opacity:1">
+
+    <button type="button"
+      onclick="document.getElementById('manualBarcodeInput').value=''"
+      style="position:absolute;right:8px;top:50%;
+      transform:translateY(-50%);background:none;
+      border:none;color:var(--text);font-size:20px;cursor:pointer">
+      ×
+    </button>
+  </div>
 
   <button id="manualBarcodeSearch" class="btn primary">
     Search
