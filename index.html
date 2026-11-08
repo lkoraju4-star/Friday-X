@@ -4851,33 +4851,31 @@ preload="auto"></audio>
   let started = false;
   let timer;
 
-  function playIntro() {
+    function playIntro() {
     if (started) return;
 
+    started = true;
     audio.currentTime = 0;
 
-    audio.play().then(() => {
-      started = true;
+    const playPromise = audio.play();
 
-      timer = setTimeout(() => {
-        audio.pause();
-        audio.currentTime = 0;
-      }, 10000);
-
-      removeListeners();
-    }).catch(() => {});
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        setTimeout(() => {
+          audio.pause();
+          audio.currentTime = 0;
+        }, 10000);
+      }).catch(() => {
+        started = false;
+      });
+    }
   }
 
-  function removeListeners() {
-    document.removeEventListener('click', playIntro);
-    document.removeEventListener('keydown', playIntro);
-    document.removeEventListener('touchstart', playIntro);
-  }
+  document.addEventListener('click', playIntro, { once: true });
+  document.addEventListener('keydown', playIntro, { once: true });
+  document.addEventListener('touchstart', playIntro, { once: true });
 
   window.addEventListener('load', playIntro, { once: true });
-  document.addEventListener('click', playIntro);
-  document.addEventListener('keydown', playIntro);
-  document.addEventListener('touchstart', playIntro);
 })();
 </script>
 </body>
