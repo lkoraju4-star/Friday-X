@@ -4838,5 +4838,47 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+ <audio id="fxStartupMusic"
+src="./u_f2xdbvliwl-oud-and-nigh-397424%20%28mp3cut.net%29.mp3"
+preload="auto"></audio>
+
+<script>
+(() => {
+  const audio = document.getElementById('fxStartupMusic');
+  if (!audio) return;
+
+  audio.volume = 0.4;
+  let started = false;
+  let timer;
+
+  function playIntro() {
+    if (started) return;
+
+    audio.currentTime = 0;
+
+    audio.play().then(() => {
+      started = true;
+
+      timer = setTimeout(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }, 10000);
+
+      removeListeners();
+    }).catch(() => {});
+  }
+
+  function removeListeners() {
+    document.removeEventListener('click', playIntro);
+    document.removeEventListener('keydown', playIntro);
+    document.removeEventListener('touchstart', playIntro);
+  }
+
+  window.addEventListener('load', playIntro, { once: true });
+  document.addEventListener('click', playIntro);
+  document.addEventListener('keydown', playIntro);
+  document.addEventListener('touchstart', playIntro);
+})();
+</script>
 </body>
 </html>
