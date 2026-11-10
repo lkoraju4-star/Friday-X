@@ -554,16 +554,11 @@ if (window.supabase && window.supabase.createClient) {
       <button class="nav-item active glow" data-view="dashboard"><i>▦</i><span data-i18n="nav.dashboard">Management Overview</span></button>
       <button class="nav-item glow" data-view="products"><i>▤</i><span data-i18n="nav.products">Product Performance</span></button>
       <button class="nav-item glow" data-view="inventory"><i>▣</i><span data-i18n="nav.inventory">Inventory Control</span></button>
-      <button class="nav-item glow" data-view="warnings" style="color:var(--warn)"><i>⚠️</i><span data-i18n="nav.warnings">Warnings (Low Stock)</span></button>
-      <button class="nav-item glow" data-view="purchasing"><i>🛒</i><span data-i18n="nav.purchasing">Purchasing</span></button>
       <button class="nav-item glow" data-view="stockmatrix"><i>▦</i><span data-i18n="nav.stockmatrix">Stock Matrix</span></button>
-      <button class="nav-item glow" data-view="pos"><i>💳</i><span data-i18n="nav.pos">POS / Checkout</span></button>
       <button class="nav-item glow" data-view="branches"><i>⛬</i><span data-i18n="nav.branches">Branch Performance</span></button>
       <button class="nav-item glow" data-view="transfers"><i>⇄</i><span data-i18n="nav.transfers">Stock Transfer Center</span></button>
       <button class="nav-item glow" data-view="branchreport"><i>▧</i><span data-i18n="nav.branchreport">Branch Reports</span></button>
       <button class="nav-item glow" data-view="datatable"><i>▥</i><span data-i18n="nav.data">Data Management</span></button>
-      <button class="nav-item glow" data-view="customers"><i>👥</i><span data-i18n="nav.customers">Customers</span></button>
-      <button class="nav-item glow" data-view="expenses"><i>💸</i><span data-i18n="nav.expenses">Expenses</span></button>
       <button class="nav-item glow" data-view="history"><i>◷</i><span data-i18n="nav.history">Upload History</span></button>
     </nav>
     <div class="side-foot">
@@ -714,32 +709,6 @@ if (window.supabase && window.supabase.createClient) {
         </div>
       </section>
 
-      <!-- ---------- WARNINGS ---------- -->
-      <section class="view" id="view-warnings">
-        <div class="banner" style="background:rgba(255,214,10,.1);border-color:rgba(255,214,10,.3)">
-          <span style="font-size:20px">⚠️</span>
-          <div><b>Low Stock Warnings:</b> All items that have fallen below the low stock threshold.</div>
-        </div>
-        <div class="widget glow" data-wid="w-warnings" data-span="12" data-h="600">
-          <div class="widget-head"><span class="widget-title" data-i18n="w.warnings">Low Stock Warnings</span>
-            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
-          <div class="widget-body" id="tbl-warnings"></div>
-          <div class="rz-handle"></div>
-        </div>
-      </section>
-
-      <!-- ---------- PURCHASING ---------- -->
-      <section class="view" id="view-purchasing">
-        <div class="widget-grid">
-          <div class="widget glow" data-wid="w-purchasing" data-span="12" data-h="600">
-            <div class="widget-head"><span class="widget-title" data-i18n="w.purchasing">Purchase Orders & Suppliers</span>
-              <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
-            <div class="widget-body" id="tbl-purchasing"></div>
-            <div class="rz-handle"></div>
-          </div>
-        </div>
-      </section>
-
       <!-- ---------- STOCK MATRIX ---------- -->
       <section class="view" id="view-stockmatrix">
         <div class="widget glow" data-wid="w-stockmatrix" data-span="12" data-h="650">
@@ -747,38 +716,6 @@ if (window.supabase && window.supabase.createClient) {
             <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
           <div class="widget-body" id="tbl-stockMatrix"></div>
           <div class="rz-handle"></div>
-        </div>
-      </section>
-
-      <!-- ---------- POS / CHECKOUT ---------- -->
-      <section class="view" id="view-pos">
-        <div class="banner" style="background:rgba(48,209,88,.1);border-color:rgba(48,209,88,.3)">
-          <span style="font-size:20px">💳</span>
-          <div><b>POS System:</b> Scan barcode to add items to cart. Stock will be deducted automatically.</div>
-        </div>
-        <div class="widget-grid">
-          <div class="widget glow" data-wid="w-pos-cart" data-span="8" data-h="500">
-            <div class="widget-head"><span class="widget-title">Current Cart</span></div>
-            <div class="widget-body" style="padding:16px;display:flex;flex-direction:column;">
-              <div style="display:flex;gap:10px;margin-bottom:15px;">
-                <input type="text" id="posBarcodeInput" placeholder="Scan or enter Barcode & press Enter..." style="flex:1;padding:12px;border-radius:8px;border:1px solid var(--accent);background:var(--glass-border);color:var(--text);">
-                <button class="btn primary" onclick="addToPOS()">Add</button>
-              </div>
-              <div id="posCartList" style="flex:1;overflow:auto;border:1px solid var(--glass-border);border-radius:8px;"></div>
-            </div>
-          </div>
-          <div class="widget glow" data-wid="w-pos-total" data-span="4" data-h="500">
-            <div class="widget-head"><span class="widget-title">Checkout</span></div>
-            <div class="widget-body" style="padding:20px;display:flex;flex-direction:column;justify-content:space-between;">
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;color:var(--muted)"><span>Subtotal</span> <span id="posSubtotal">0.00</span></div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:14px;color:var(--muted)"><span>VAT (15%)</span> <span id="posVat">0.00</span></div>
-                <hr style="border-color:var(--glass-border);margin:15px 0;">
-                <div style="display:flex;justify-content:space-between;font-size:24px;font-weight:600;"><span>Total</span> <span id="posTotal" class="pos">0.00</span></div>
-              </div>
-              <button class="btn primary" style="width:100%;padding:16px;font-size:16px;" onclick="checkoutPOS()">Complete Payment</button>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -846,26 +783,6 @@ if (window.supabase && window.supabase.createClient) {
           <div class="widget-head"><span class="widget-title" data-i18n="w.rawData">Filtered Data Table</span>
             <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
           <div class="widget-body" id="tbl-dataTable"></div>
-          <div class="rz-handle"></div>
-        </div>
-      </section>
-
-      <!-- ---------- CUSTOMERS ---------- -->
-      <section class="view" id="view-customers">
-        <div class="widget glow" data-wid="w-customers" data-span="12" data-h="600">
-          <div class="widget-head"><span class="widget-title" data-i18n="w.customers">Customer Database</span>
-            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
-          <div class="widget-body" id="tbl-customers"></div>
-          <div class="rz-handle"></div>
-        </div>
-      </section>
-
-      <!-- ---------- EXPENSES ---------- -->
-      <section class="view" id="view-expenses">
-        <div class="widget glow" data-wid="w-expenses" data-span="12" data-h="600">
-          <div class="widget-head"><span class="widget-title" data-i18n="w.expenses">Expense Management</span>
-            <div class="widget-tools"><button data-act="min" title="Minimize">–</button><button data-act="max" title="Fullscreen">⛶</button></div></div>
-          <div class="widget-body" id="tbl-expenses"></div>
           <div class="rz-handle"></div>
         </div>
       </section>
@@ -1054,9 +971,9 @@ const RAW_COLMAP=Object.fromEntries(COLUMNS.map(c=>[c.key,{type:c.type,get:r=>r[
 
 const VIEW_TITLE_KEY={
   dashboard:'nav.dashboard', products:'nav.products', inventory:'nav.inventory',
-  warnings:'nav.warnings', purchasing:'nav.purchasing', stockmatrix:'nav.stockmatrix', pos:'nav.pos',
+  stockmatrix:'nav.stockmatrix',
   branches:'nav.branches', transfers:'nav.transfers', branchreport:'nav.branchreport',
-  data:'nav.data', customers:'nav.customers', expenses:'nav.expenses', history:'nav.history'
+  data:'nav.data', history:'nav.history'
 };
 const PR_KEY={High:'pr.high',Medium:'pr.medium',Low:'pr.low'};
 const ST_KEY={Pending:'st.pending',Approved:'st.approved',Rejected:'st.rejected'};
@@ -1066,10 +983,9 @@ en:{
   'app.title':'Retail Intelligence','app.sub':'Sales, Profit & Inventory Management',
   'app.docTitle':'Retail Intelligence — Sales, Profit & Inventory Management',
   'nav.dashboard':'Management Overview','nav.products':'Product Performance','nav.inventory':'Inventory Control',
-  'nav.warnings':'Warnings (Low Stock)',
-  'nav.purchasing':'Purchasing','nav.stockmatrix':'Stock Matrix','nav.pos':'POS / Checkout',
+  'nav.stockmatrix':'Stock Matrix',
   'nav.branches':'Branch Performance','nav.transfers':'Stock Transfer Center','nav.branchreport':'Branch Reports',
-  'nav.data':'Data Management','nav.customers':'Customers','nav.expenses':'Expenses','nav.history':'Upload History',
+  'nav.data':'Data Management','nav.history':'Upload History',
   'btn.upload':'⬆ Upload Excel Data','btn.resetLayout':'Reset Layout','btn.filters':'Advanced Filters',
   'btn.clearAll':'Clear Filters','btn.export':'Export Report','btn.save':'Save Settings','btn.cancel':'Cancel',
   'btn.load':'Load','btn.delete':'Delete','btn.approve':'Approve','btn.reject':'Reject',
@@ -1083,9 +999,7 @@ en:{
   'w.invStatus':'Inventory Status','w.branchPerf':'Branch Performance Summary','w.topProducts':'Top Products',
   'w.subgroupPerf':'Subgroup Performance','w.profitChart':'Profit by Subgroup','w.oos':'Out of Stock',
   'w.low':'Low Stock','w.over':'Overstock','w.fast':'Fast Moving','w.branchCompare':'Branch Comparison',
-  'w.warnings':'Low Stock Warnings',
-  'w.purchasing':'Purchase Orders & Suppliers','w.stockmatrix':'Stock Matrix (Branch vs Items)',
-  'w.customers':'Customer Database','w.expenses':'Expense Management',
+  'w.stockmatrix':'Stock Matrix (Branch vs Items)',
   'w.branchChart':'Sales, Profit & Stock by Branch','w.transfers':'Stock Transfer Recommendations',
   'w.branchReport':'Branch Stock Transfer Report','w.rawData':'Filtered Data Table','w.settings':'Business Rules & Settings',
   'kpi.qty':'Total Sales Quantity','kpi.invoice':'Total Sales Amount','kpi.cost':'Total Cost','kpi.profit':'Total Profit',
@@ -1168,10 +1082,9 @@ ar:{
   'app.title':'ذكاء الأعمال والتجزئة','app.sub':'إدارة المبيعات والأرباح والمخزون',
   'app.docTitle':'ذكاء الأعمال والتجزئة — إدارة المبيعات والأرباح والمخزون',
   'nav.dashboard':'نظرة عامة للإدارة','nav.products':'أداء الأصناف','nav.inventory':'إدارة المخزون',
-  'nav.warnings':'التحذيرات (مخزون منخفض)',
-  'nav.purchasing':'المشتريات','nav.stockmatrix':'مصفوفة المخزون','nav.pos':'نقطة البيع',
+  'nav.stockmatrix':'مصفوفة المخزون',
   'nav.branches':'أداء الفروع','nav.transfers':'إدارة تحويل المخزون','nav.branchreport':'تقارير الفروع',
-  'nav.data':'إدارة البيانات','nav.customers':'العملاء','nav.expenses':'المصروفات','nav.history':'سجل الملفات المرفوعة',
+  'nav.data':'إدارة البيانات','nav.history':'سجل الملفات المرفوعة',
   'btn.upload':'⬆ رفع ملف Excel','btn.resetLayout':'استعادة التخطيط','btn.filters':'الفلاتر المتقدمة',
   'btn.clearAll':'مسح الفلاتر','btn.export':'تصدير التقرير','btn.save':'حفظ الإعدادات','btn.cancel':'إلغاء',
   'btn.load':'تحميل','btn.delete':'حذف','btn.approve':'اعتماد','btn.reject':'رفض',
@@ -1185,9 +1098,7 @@ ar:{
   'w.invStatus':'حالة المخزون','w.branchPerf':'ملخص أداء الفروع','w.topProducts':'أفضل الأصناف',
   'w.subgroupPerf':'أداء المجموعات','w.profitChart':'الأرباح حسب المجموعة','w.oos':'نفد من المخزون',
   'w.low':'مخزون منخفض','w.over':'مخزون زائد','w.fast':'سريع الحركة','w.branchCompare':'مقارنة الفروع',
-  'w.warnings':'تحذيرات المخزون المنخفض',
-  'w.purchasing':'أوامر الشراء والموردين','w.stockmatrix':'مصفوفة المخزون',
-  'w.customers':'العملاء','w.expenses':'المصروفات',
+  'w.stockmatrix':'مصفوفة المخزون',
   'w.branchChart':'المبيعات والأرباح والمخزون','w.transfers':'توصيات تحويل المخزون',
   'w.branchReport':'تقرير تحويل المخزون','w.rawData':'جدول البيانات','w.settings':'قواعد وإعدادات',
   'kpi.qty':'إجمالي الكمية','kpi.invoice':'إجمالي المبيعات','kpi.cost':'إجمالي التكلفة','kpi.profit':'إجمالي الربح',
@@ -1843,7 +1754,7 @@ function computeTransferRecs(){
   for(let i=0;i<rows.length;i++){
     const r=rows[i];
     let it=byItem.get(r.itemCode);
-    if(!it){ it={itemCode:r.itemCode,itemName:r.itemName,subgroupName:r.subgroupName,unit:r.unit,branches:new Map()}; byItem.set(r.itemCode,it); }
+    if(!it){ it={itemCode:r.itemCode,itemName:r.itemName,subgroupName:r.subgroupName,unit:r.unit,barcode:r.barcode,imageUrl:r.imageUrl,branches:new Map()}; byItem.set(r.itemCode,it); }
     let b=it.branches.get(r.branchCode);
     if(!b){ b={branchCode:r.branchCode,stock:0,qty:0}; it.branches.set(r.branchCode,b); }
     b.stock+=r.stock; b.qty+=r.qty;
@@ -1889,6 +1800,7 @@ function computeTransferRecs(){
       const st=state.transferStatus[k]||{};
       out.push({
         key:k,itemCode:it.itemCode,itemName:it.itemName,subgroupName:it.subgroupName,unit:it.unit,
+        barcode: it.barcode, imageUrl: it.imageUrl,
         destBranch:d.branchCode,destStock:d.stock,destSalesQty:d.qty,
         period,avgDaily,transferDays:days,requiredQty:required,
         sources:alloc,primarySource:alloc[0].source,primarySourceStock:alloc[0].sourceStock,
@@ -2379,12 +2291,6 @@ function defineSpecs(){
     TABLE_SPECS[k]={id:k,getRows:()=>invRows(k),columns:invCols.slice()};
   });
 
-  TABLE_SPECS.warnings = {
-    id: 'warnings',
-    getRows: () => invRows('low'),
-    columns: invCols.slice()
-  };
-
   TABLE_SPECS.branchCompare={
     id:'branchCompare',
     getRows:()=>ensureGlobal().branchAgg,
@@ -2407,6 +2313,22 @@ function defineSpecs(){
     getRows:()=>computeTransferRecs(),
     columns:[
       {key:'itemCode',label:tr('th.code'),type:'text',width:110,get:r=>r.itemCode},
+      { key:'imageUrl', label:'Images', type:'text', width:110, sortable:false,
+        get: r => r.imageUrl || r.barcode,
+        render:r=>{
+            let prodSrc = r.imageUrl;
+            if(!prodSrc) prodSrc = `https://placehold.co/36x36/1e1e23/ffffff?text=No+Img`;
+            
+            let barSrc = `https://barcode.tec-it.com/barcode.ashx?data=${r.barcode}&code=Code128&dpi=96`;
+            if(!r.barcode) barSrc = `https://placehold.co/36x36/1e1e23/ffffff?text=No+Bar`;
+            
+            return `<div style="display:flex; gap:4px; align-items:center; justify-content:center;">
+                <img src="${prodSrc}" title="Product Image" style="width:36px; height:36px; object-fit:contain; border-radius:4px; background:#fff; padding:2px;">
+                <img src="${barSrc}" title="Barcode" style="width:36px; height:36px; object-fit:contain; border-radius:4px; background:#fff; padding:2px;">
+            </div>`;
+        }
+      },
+      {key:'barcode',label:'Barcode',type:'text',width:130,get:r=>r.barcode},
       {key:'itemName',label:tr('th.itemName'),type:'text',width:200,get:r=>r.itemName},
       {key:'subgroupName',label:tr('th.subgroup'),type:'text',width:130,get:r=>r.subgroupName},
       {key:'destBranch',label:tr('th.dest'),type:'text',width:120,get:r=>r.destBranch,render:r=>`<b>${esc(r.destBranch)}</b>`},
@@ -2465,37 +2387,6 @@ function defineSpecs(){
     }))
   };
 
-  TABLE_SPECS.purchasing = {
-    id: 'purchasing',
-    getRows: () => {
-      return [
-        { po:'PO-1001', supplier:'Almarai Co.', date:'2023-10-25', item:'Fresh Milk 1L', category:'Dairy', barcode:'62810001234', imageUrl:'https://images.openfoodfacts.org/images/products/628/100/012/34/front_en.3.400.jpg', qty:500, cost:4.5, total:2250, status:'Received' },
-        { po:'PO-1002', supplier:'Nadec Foods', date:'2023-10-26', item:'Orange Juice 1L', category:'Beverages', barcode:'62810005678', imageUrl:'https://images.openfoodfacts.org/images/products/628/100/056/78/front_en.3.400.jpg', qty:200, cost:6.0, total:1200, status:'Pending' },
-        { po:'PO-1003', supplier:'Sadia Foods', date:'2023-10-27', item:'Chicken Breast 1kg', category:'Frozen', barcode:'62810009999', imageUrl:'', qty:150, cost:18.0, total:2700, status:'Received' }
-      ];
-    },
-    columns: [
-      { key:'po', label:'PO Number', type:'text', width:120, get:r=>r.po },
-      { key:'supplier', label:'Supplier', type:'text', width:180, get:r=>r.supplier },
-      { key:'date', label:'Date', type:'text', width:120, get:r=>r.date },
-      { key:'item', label:'Item Name', type:'text', width:220, get:r=>r.item },
-      { key:'imageUrl', label:'Image', type:'text', width:60, sortable:false,
-        render:r=>{
-            let src = r.imageUrl;
-            if(!src && r.barcode) src = `https://barcode.tec-it.com/barcode.ashx?data=${r.barcode}&code=Code128&dpi=96`;
-            if(!src) src = `https://placehold.co/40x40/1e1e23/ffffff?text=No`;
-            return `<img src="${src}" style="width:40px; height:40px; object-fit:contain; border-radius:6px; background:#fff; padding:2px;">`;
-        }
-      },
-      { key:'category', label:'Category', type:'text', width:140, get:r=>r.category },
-      { key:'barcode', label:'Barcode', type:'text', width:130, get:r=>r.barcode },
-      { key:'qty', label:'Order Qty', type:'num', width:100, get:r=>r.qty, render:r=>fmt(r.qty) },
-      { key:'cost', label:'Unit Cost', type:'num', width:100, get:r=>r.cost, render:r=>fmtCur(r.cost) },
-      { key:'total', label:'Total', type:'num', width:120, get:r=>r.total, render:r=>fmtCur(r.total) },
-      { key:'status', label:'Status', type:'text', width:100, get:r=>r.status, render:r=>`<span class="tag ${r.status==='Received'?'low':'med'}">${esc(r.status)}</span>` }
-    ]
-  };
-
   TABLE_SPECS.stockMatrix = {
     id: 'stockMatrix',
     getRows: () => ensureGlobal().rows,
@@ -2522,40 +2413,6 @@ function defineSpecs(){
     ]
   };
 
-  TABLE_SPECS.customers = {
-    id: 'customers',
-    getRows: () => [
-      { id:'C-001', name:'Ahmed Ali', phone:'+966 50 123 4567', points:120, spent:4500, type:'VIP' },
-      { id:'C-002', name:'Sara Khan', phone:'+966 55 987 6543', points:45, spent:1200, type:'Regular' },
-      { id:'C-003', name:'Omar Youssef', phone:'+966 54 111 2233', points:0, spent:150, type:'New' }
-    ],
-    columns: [
-      { key:'id', label:'Customer ID', type:'text', width:120, get:r=>r.id },
-      { key:'name', label:'Full Name', type:'text', width:200, get:r=>r.name },
-      { key:'phone', label:'Phone', type:'text', width:150, get:r=>r.phone },
-      { key:'points', label:'Loyalty Points', type:'num', width:120, get:r=>r.points, render:r=>fmt(r.points) },
-      { key:'spent', label:'Total Spent', type:'num', width:120, get:r=>r.spent, render:r=>fmtCur(r.spent) },
-      { key:'type', label:'Type', type:'text', width:100, get:r=>r.type, render:r=>`<span class="tag ${r.type==='VIP'?'high':r.type==='New'?'info':'low'}">${esc(r.type)}</span>` }
-    ]
-  };
-
-  TABLE_SPECS.expenses = {
-    id: 'expenses',
-    getRows: () => [
-      { id:'EXP-01', date:'2023-10-25', category:'Rent', desc:'Branch 01 Rent', amount:5000, status:'Paid' },
-      { id:'EXP-02', date:'2023-10-26', category:'Utilities', desc:'Electricity Bill', amount:1200, status:'Paid' },
-      { id:'EXP-03', date:'2023-10-27', category:'Salary', desc:'Staff Advance', amount:800, status:'Pending' }
-    ],
-    columns: [
-      { key:'id', label:'Expense ID', type:'text', width:120, get:r=>r.id },
-      { key:'date', label:'Date', type:'text', width:120, get:r=>r.date },
-      { key:'category', label:'Category', type:'text', width:150, get:r=>r.category },
-      { key:'desc', label:'Description', type:'text', width:250, get:r=>r.desc },
-      { key:'amount', label:'Amount', type:'num', width:120, get:r=>r.amount, render:r=>`<span class="neg">${fmtCur(r.amount)}</span>` },
-      { key:'status', label:'Status', type:'text', width:100, get:r=>r.status, render:r=>`<span class="tag ${r.status==='Paid'?'low':'med'}">${esc(r.status)}</span>` }
-    ]
-  };
-
   Object.keys(TABLE_SPECS).forEach(id=>{
     const spec=TABLE_SPECS[id];
     spec.colMap={};
@@ -2574,7 +2431,13 @@ function exportTable(id, format){
   const cols=visibleColumns(spec,st);
   const data=rows.map(r=>{
     const o={};
-    cols.forEach(c=>{ o[c.label]= c.get? c.get(r) : r[c.key]; });
+    cols.forEach(c=>{ 
+      let val = c.get ? c.get(r) : r[c.key]; 
+      if (c.key === 'imageUrl' && !val && r.barcode) {
+        val = `https://barcode.tec-it.com/barcode.ashx?data=${r.barcode}&code=Code128&dpi=96`;
+      }
+      o[c.label] = val; 
+    });
     return o;
   });
   const ws=XLSX.utils.json_to_sheet(data);
@@ -3249,7 +3112,6 @@ function renderView(v){
   if(v==='dashboard'){ renderKPIs(); renderDashCharts(); renderTable('branchPerf'); }
   else if(v==='products'){ renderProfitChart(); renderTable('topProducts'); renderTable('subgroupPerf'); }
   else if(v==='inventory'){ renderTable('oos'); renderTable('low'); renderTable('over'); renderTable('fast'); }
-  else if(v==='warnings'){ renderTable('warnings'); }
   else if(v==='branches'){ renderBranchChart(); renderTable('branchCompare'); }
   else if(v==='transfers'){
     const recs=computeTransferRecs();
@@ -3259,15 +3121,7 @@ function renderView(v){
   else if(v==='branchreport'){ renderTable('branchReport'); }
   else if(v==='datatable'){ renderTable('dataTable'); }
   else if(v==='history'){ renderHistory(); renderPerf(); }
-  // --- NAYE VIEWS ---
-  else if(v==='purchasing'){ renderTable('purchasing'); }
   else if(v==='stockmatrix'){ renderTable('stockMatrix'); }
-  else if(v==='customers'){ renderTable('customers'); }
-  else if(v==='expenses'){ renderTable('expenses'); }
-  else if(v==='pos'){ 
-    document.getElementById('posBarcodeInput').focus();
-    renderPOSCart();
-  }
 }
 function renderAll(){
   const has=allRows().length>0;
@@ -3447,15 +3301,6 @@ if (mobileFilterToggle && controlbar) {
       renderTable('transferTable'); renderTable('branchReport');
     }
   });
-
-  const posInput = document.getElementById('posBarcodeInput');
-  if(posInput) {
-    posInput.addEventListener('keypress', function(e) {
-      if(e.key === 'Enter') {
-        addToPOS();
-      }
-    });
-  }
 }
 
 async function loadCloudDataset(){
@@ -3813,54 +3658,6 @@ async function closeBarcodeScanner() {
   if (barcodeScanner) { try { await barcodeScanner.stop(); } catch(e) {} try { barcodeScanner.clear(); } catch(e) {} barcodeScanner = null; }
   document.getElementById('barcodeScannerModal').style.display = 'none';
 } 
- 
-let posCart = [];
-function addToPOS() {
-  const input = document.getElementById('posBarcodeInput');
-  const code = input.value.trim();
-  if(!code) return;
-  const item = allRows().find(r => String(r.barcode) === code || String(r.itemCode) === code);
-  if(!item) { alert('Item not found in system!'); input.value = ''; return; }
-  const existing = posCart.find(i => i.itemCode === item.itemCode);
-  if(existing) { existing.qty++; } else {
-    const price = item.qty > 0 ? (item.invoice / item.qty) : item.cost;
-    posCart.push({ itemCode: item.itemCode, itemName: item.itemName, barcode: item.barcode, price: price, qty: 1, imageUrl: item.imageUrl });
-  }
-  input.value = '';
-  renderPOSCart();
-}
-function renderPOSCart() {
-  const list = document.getElementById('posCartList');
-  if(!list) return;
-  if(!posCart.length) { list.innerHTML = '<div class="empty" style="padding:20px;color:var(--muted)">Cart is empty. Scan barcode to add items.</div>'; updatePOSTotals(); return; }
-  
-  let html = `<table class="dt" style="width:100%"><thead><tr><th>Image</th><th>Item</th><th>Barcode</th><th>Price</th><th>Qty</th><th>Total</th><th></th></tr></thead><tbody>`;
-  posCart.forEach((item, index) => {
-    let img = item.imageUrl;
-    if(!img) img = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.itemName.substring(0, 15))}&background=1e1e23&color=fff&size=40&font-size=0.33&rounded=true`;
-
-    html += `<tr>
-      <td><img src="${img}" style="width:40px; height:40px; object-fit:contain; border-radius:6px; background:#fff; padding:2px;"></td>
-      <td>${esc(item.itemName)}</td><td>${esc(item.barcode)}</td><td>${fmtCur(item.price)}</td>
-      <td><input type="number" min="1" value="${item.qty}" onchange="updatePOSQty(${index}, this.value)" style="width:50px;padding:4px;background:rgba(255,255,255,0.05);color:#fff;border:1px solid var(--glass-border);border-radius:6px;"></td>
-      <td>${fmtCur(item.price * item.qty)}</td>
-      <td><button class="btn sm danger" onclick="removeFromPOS(${index})">✕</button></td></tr>`;
-  });
-  html += `</tbody></table>`; list.innerHTML = html; updatePOSTotals();
-}
-function updatePOSQty(index, val) { posCart[index].qty = Math.max(1, Number(val) || 1); renderPOSCart(); }
-function removeFromPOS(index) { posCart.splice(index, 1); renderPOSCart(); }
-function updatePOSTotals() {
-  const subtotal = posCart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const vat = subtotal * 0.15; const total = subtotal + vat;
-  const st = document.getElementById('posSubtotal'); const vt = document.getElementById('posVat'); const tt = document.getElementById('posTotal');
-  if(st) st.textContent = fmtCur(subtotal); if(vt) vt.textContent = fmtCur(vat); if(tt) tt.textContent = fmtCur(total);
-}
-function checkoutPOS() {
-  if(!posCart.length) return alert('Cart is empty!');
-  alert('Payment Successful! Amount: ' + document.getElementById('posTotal').textContent);
-  posCart = []; renderPOSCart();
-}
 
 async function init(){
   loadPrefs();
