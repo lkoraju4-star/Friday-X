@@ -3915,9 +3915,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
- <audio id="fxStartupMusic"
-src="https://lkoraju4-star.github.io/HALA/u_f2xdbvliwl-oud-and-nigh-397424%20%28mp3cut.net%29.mp3"
-preload="auto"></audio>
+
+<audio id="fxStartupMusic"
+  src="./47313572-startup-sound-variation-6-316850.mp3"
+  preload="auto"></audio>
 
 <script>
 (() => {
@@ -3925,15 +3926,12 @@ preload="auto"></audio>
   if (!audio) return;
 
   const targetVolume = 0.4;
-  const fadeSeconds = 3;
-  const totalSeconds = 9.5;
+  const fadeSeconds = 1.5;
   let started = false;
-  let fadeTimer = null;
 
   function playIntro() {
     if (started) return;
 
-    audio.pause();
     audio.currentTime = 0;
     audio.volume = 0;
 
@@ -3941,21 +3939,12 @@ preload="auto"></audio>
       started = true;
       const startTime = Date.now();
 
-      fadeTimer = setInterval(() => {
+      const fadeTimer = setInterval(() => {
         const elapsed = (Date.now() - startTime) / 1000;
+        audio.volume = Math.min(targetVolume, targetVolume * elapsed / fadeSeconds);
 
-        if (elapsed < fadeSeconds) {
-          audio.volume = targetVolume * elapsed / fadeSeconds;
-        } else if (elapsed < totalSeconds - fadeSeconds) {
-          audio.volume = targetVolume;
-        } else {
-          audio.volume = Math.max(0, targetVolume * (totalSeconds - elapsed) / fadeSeconds);
-        }
-
-        if (elapsed >= totalSeconds) {
+        if (audio.ended) {
           clearInterval(fadeTimer);
-          audio.pause();
-          audio.currentTime = 0;
           audio.volume = targetVolume;
         }
       }, 50);
@@ -3973,5 +3962,6 @@ preload="auto"></audio>
   document.addEventListener('touchstart', playIntro);
 })();
 </script>
+
 </body>
 </html>
