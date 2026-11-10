@@ -3750,7 +3750,9 @@ if ('serviceWorker' in navigator) {
       document.removeEventListener('click', playIntro);
       document.removeEventListener('keydown', playIntro);
       document.removeEventListener('touchstart', playIntro);
-    }).catch(() => {});
+    }).catch((error) => {
+  console.error('Friday X Startup Sound Error:', error);
+});
   }
 
   window.addEventListener('load', playIntro);
